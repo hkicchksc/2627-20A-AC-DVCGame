@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#171816">
+  <title>Color Study — a keyboard color-match game</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #171816;
+      color: #f2f0e9;
+      font-synthesis: none;
+      text-rendering: optimizeLegibility;
+      --muted: #aaa99f;
+      --line: #44453f;
+      --acid: #d1fb73;
+      --panel: #20211e;
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 320px; min-height: 100vh; background: radial-gradient(ellipse at 50% 0%, #303329 0, #171816 55rem); }
+    body:focus { outline: none; }
+    main { width: min(1120px, calc(100% - 40px)); margin: 0 auto; padding: 30px 0 26px; }
+    header, .masthead, .round-info, .photo-head, .photo-foot, .controls-head, .control-row, .statusline, .footer { display: flex; align-items: center; justify-content: space-between; }
+    header { border-bottom: 1px solid var(--line); padding-bottom: 18px; }
+    .brand { display: flex; align-items: center; gap: 11px; font-size: 13px; font-weight: 760; letter-spacing: .14em; text-transform: uppercase; }
+    .brand-mark { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; color: #171816; background: var(--acid); font-size: 16px; }
+    .edition { color: var(--muted); font-size: 11px; letter-spacing: .16em; text-transform: uppercase; }
+    .intro { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 24px; padding: 34px 0 26px; }
+    .eyebrow { margin: 0 0 9px; color: var(--acid); font-size: 11px; font-weight: 750; letter-spacing: .18em; text-transform: uppercase; }
+    h1 { margin: 0; font-size: clamp(34px, 5vw, 57px); font-weight: 570; letter-spacing: -.055em; line-height: .98; }
+    .intro-copy { max-width: 300px; margin: 0 0 3px; color: #c2c1b8; font-size: 13px; line-height: 1.65; }
+    .round-info { gap: 17px; padding: 0 0 12px; color: var(--muted); font-size: 11px; letter-spacing: .13em; text-transform: uppercase; }
+    .round-count { color: var(--acid); font-weight: 750; }
+    .photos { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .photo-card { min-width: 0; overflow: hidden; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+    .photo-head { padding: 3px 3px 10px; font-size: 10px; font-weight: 760; letter-spacing: .15em; text-transform: uppercase; }
+    .photo-head span:last-child { color: var(--muted); font-weight: 550; letter-spacing: .08em; }
+    .image-frame { position: relative; display: grid; place-items: center; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 4px; background: #30312d; }
+    .image-frame img { width: 100%; height: 100%; object-fit: cover; }
+    .image-fallback { position: absolute; padding: 20px; color: #f2f0e9; font-size: 13px; text-align: center; }
+    .image-fallback[hidden] { display: none; }
+    .photo-foot { gap: 10px; padding: 11px 3px 2px; color: var(--muted); font-size: 10px; letter-spacing: .09em; text-transform: uppercase; }
+    .photo-foot span:last-child { color: #deddd5; text-align: right; }
+    .tuning { display: grid; grid-template-columns: 1fr 1.15fr; gap: 28px; align-items: center; margin-top: 18px; padding: 17px 20px; border: 1px solid var(--line); border-radius: 8px; background: #1d1e1b; }
+    .controls-head { margin-bottom: 8px; color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; }
+    .control-row { position: relative; min-height: 38px; padding: 0 9px; border-radius: 4px; color: #c5c4bc; font-size: 12px; }
+    .control-row[aria-current="true"] { color: #f5f4ee; background: #31352a; outline: 1px solid #596344; }
+    .channel-name { min-width: 90px; font-size: 10px; font-weight: 750; letter-spacing: .12em; }
+    .channel-value { color: var(--acid); font-variant-numeric: tabular-nums; font-size: 13px; }
+    .keys { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 7px 12px; color: #c8c7bd; font-size: 11px; }
+    .key-tip { display: flex; align-items: center; gap: 7px; white-space: nowrap; }
+    kbd { display: inline-grid; min-width: 23px; height: 23px; place-items: center; padding: 0 5px; border: 1px solid #64665d; border-bottom-width: 2px; border-radius: 4px; color: #f5f4ee; font: 700 11px ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .statusline { min-height: 56px; gap: 18px; border-bottom: 1px solid var(--line); color: #cbc9c0; font-size: 12px; }
+    #message { margin: 0; line-height: 1.5; }
+    #message.success { color: var(--acid); }
+    #message.error { color: #ffad92; }
+    .attempts { flex: none; color: var(--muted); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; }
+    .footer { gap: 16px; padding-top: 16px; color: var(--muted); font-size: 10px; letter-spacing: .09em; text-transform: uppercase; }
+    .footer a { color: #d8d7ce; text-decoration-color: #77776e; text-underline-offset: 3px; }
+
+    @media (max-width: 700px) {
+      main { width: min(100% - 24px, 540px); padding-top: 18px; }
+      .intro { grid-template-columns: 1fr; gap: 13px; padding: 28px 0 21px; }
+      .intro-copy { max-width: 440px; }
+      .photos { gap: 9px; }
+      .photo-card { padding: 7px; }
+      .photo-head { font-size: 9px; letter-spacing: .1em; }
+      .photo-foot { font-size: 9px; letter-spacing: .04em; }
+      .tuning { grid-template-columns: 1fr; gap: 15px; padding: 14px; }
+      .keys { justify-content: flex-start; }
+    }
+
+    @media (max-width: 440px) {
+      .edition { font-size: 9px; }
+      .photos { grid-template-columns: 1fr; }
+      .image-frame { aspect-ratio: 16 / 8.5; }
+      .round-info { padding-bottom: 9px; }
+      .photo-head { font-size: 10px; }
+      .photo-foot { font-size: 10px; }
+      .statusline { align-items: flex-start; padding: 13px 0; }
+      .attempts { padding-top: 2px; }
+      .footer { align-items: flex-start; flex-direction: column; gap: 8px; }
+    }
+  </style>
+</head>
+<body tabindex="0">
+  <main>
+    <header>
+      <div class="brand"><span class="brand-mark" aria-hidden="true">◒</span><span>Color Study</span></div>
+      <div class="edition">A tiny image-matching game</div>
+    </header>
+
+    <section class="intro" aria-labelledby="title">
+      <div>
+        <p class="eyebrow">Look closer · tune by feel</p>
+        <h1 id="title">Find the<br>right color.</h1>
+      </div>
+      <p class="intro-copy">Adjust hue, saturation, and lightness until your original feels like the reference. Three images. Arrow keys only.</p>
+    </section>
+
+    <div class="round-info"><span>Color match</span><span class="round-count" id="round-count">01 / 03</span></div>
+
+    <section class="photos" aria-label="Compare your image with the color reference">
+      <figure class="photo-card">
+        <figcaption class="photo-head"><span>Your image</span><span>Original · your tune</span></figcaption>
+        <div class="image-frame">
+          <img id="player-image" alt="Original CreativeHK photograph, adjusted by your color controls" decoding="async">
+          <span class="image-fallback" hidden>Image unavailable. Check your internet connection and reload.</span>
+        </div>
+        <div class="photo-foot"><span id="player-caption">CreativeHK · source</span><span>Adjust this image</span></div>
+      </figure>
+      <figure class="photo-card">
+        <figcaption class="photo-head"><span>Reference</span><span>Target · color study</span></figcaption>
+        <div class="image-frame">
+          <img id="target-image" alt="The same CreativeHK photograph with the target color treatment" decoding="async">
+          <span class="image-fallback" hidden>Image unavailable. Check your internet connection and reload.</span>
+        </div>
+        <div class="photo-foot"><span id="target-caption">CreativeHK · source</span><span>Match this color</span></div>
+      </figure>
+    </section>
+
+    <section class="tuning" aria-label="Color controls">
+      <div>
+        <div class="controls-head"><span>Color channels</span><span>Selected channel</span></div>
+        <div class="control-row" data-channel="hue" aria-current="true" role="group" aria-label="Hue: 0 degrees">
+          <span class="channel-name">01 / HUE</span><span>↔</span><span class="channel-value" id="hue-value">0°</span>
+        </div>
+        <div class="control-row" data-channel="saturation" aria-current="false" role="group" aria-label="Saturation: 1.0 times">
+          <span class="channel-name">02 / SATURATION</span><span>↔</span><span class="channel-value" id="saturation-value">1.0×</span>
+        </div>
+        <div class="control-row" data-channel="lightness" aria-current="false" role="group" aria-label="Lightness: 1.00 times">
+          <span class="channel-name">03 / LIGHTNESS</span><span>↔</span><span class="channel-value" id="lightness-value">1.00×</span>
+        </div>
+      </div>
+      <div>
+        <div class="controls-head"><span>Keyboard</span><span>Only the arrows and space</span></div>
+        <div class="keys" aria-label="Keyboard instructions">
+          <span class="key-tip"><kbd>↑</kbd><kbd>↓</kbd> choose channel</span>
+          <span class="key-tip"><kbd>←</kbd><kbd>→</kbd> adjust value</span>
+          <span class="key-tip"><kbd>Space</kbd> submit</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="statusline">
+      <p id="message" role="status" aria-live="polite">Use ↑ ↓ to choose a channel, then ← → to tune it. Press Space to submit.</p>
+      <span class="attempts" id="attempts">Attempts · 0</span>
+    </div>
+
+    <footer class="footer">
+      <span>Images courtesy of <a href="https://www.creativehk.edu.hk/" target="_blank" rel="noopener noreferrer">CreativeHK</a></span>
+      <span>Hue · saturation · lightness</span>
+    </footer>
+  </main>
+
+  <script>
+    const images = [
+      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4015571178714403489.webp', caption: 'School volleyball · CreativeHK' },
+      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4010448831913228017.webp', caption: 'Beach volleyball · CreativeHK' },
+      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4013348841663313305.jpg', caption: 'Art exhibition · CreativeHK' }
+    ];
+    const channels = ['hue', 'saturation', 'lightness'];
+    const steps = { hue: 5, saturation: 0.1, lightness: 0.05 };
+    const bounds = { hue: [-180, 180], saturation: [0.4, 2], lightness: [0.55, 1.45] };
+    const playerImage = document.querySelector('#player-image');
+    const targetImage = document.querySelector('#target-image');
+    const message = document.querySelector('#message');
+    let round = 0;
+    let attempts = 0;
+    let selected = 0;
+    let locked = false;
+    let complete = false;
+    let player;
+    let target;
+
+    const randomStep = (min, max, step) => min + Math.floor(Math.random() * ((max - min) / step + 1)) * step;
+
+    // shortcut: lightness uses CSS brightness; use a same-origin pixel transform when exact HSL is required.
+    function filterFor(color) {
+      return `hue-rotate(${color.hue}deg) saturate(${color.saturation}) brightness(${color.lightness})`;
+    }
+
+    function formatChannel(channel, value) {
+      if (channel === 'hue') return `${value}°`;
+      return `${value.toFixed(channel === 'saturation' ? 1 : 2)}×`;
+    }
+
+    function render() {
+      playerImage.style.filter = filterFor(player);
+      targetImage.style.filter = filterFor(target);
+      channels.forEach((channel, index) => {
+        const row = document.querySelector(`[data-channel="${channel}"]`);
+        const value = player[channel];
+        row.setAttribute('aria-current', String(index === selected));
+        row.setAttribute('aria-label', `${channel}: ${formatChannel(channel, value)}${index === selected ? ', selected' : ''}`);
+        document.querySelector(`#${channel}-value`).textContent = formatChannel(channel, value);
+      });
+      document.querySelector('#round-count').textContent = `${String(round + 1).padStart(2, '0')} / ${String(images.length).padStart(2, '0')}`;
+      document.querySelector('#attempts').textContent = `Attempts · ${attempts}`;
+    }
+
+    function setMessage(text, kind = '') {
+      message.className = kind;
+      message.textContent = text;
+    }
+
+    function startRound(index) {
+      round = index;
+      attempts = 0;
+      selected = 0;
+      locked = false;
+      complete = false;
+      player = { hue: 0, saturation: 1, lightness: 1 };
+      target = {
+        hue: randomStep(-180, 180, 5),
+        saturation: Number(randomStep(0.4, 2, 0.1).toFixed(1)),
+        lightness: Number(randomStep(0.55, 1.45, 0.05).toFixed(2))
+      };
+      const image = images[round];
+      playerImage.src = image.src;
+      targetImage.src = image.src;
+      document.querySelector('#player-caption').textContent = image.caption;
+      document.querySelector('#target-caption').textContent = image.caption;
+      document.querySelectorAll('.image-frame').forEach(frame => {
+        frame.querySelector('.image-fallback').hidden = true;
+        frame.querySelector('img').hidden = false;
+      });
+      setMessage('Use ↑ ↓ to choose a channel, then ← → to tune it. Press Space to submit.');
+      render();
+    }
+
+    function submit() {
+      if (locked) return;
+      attempts += 1;
+      const hueError = Math.abs(((player.hue - target.hue + 540) % 360) - 180);
+      const saturationError = Math.abs(player.saturation - target.saturation);
+      const lightnessError = Math.abs(player.lightness - target.lightness);
+      const score = Math.round(100 * (1 - 0.4 * hueError / 180 - 0.3 * saturationError / 1.6 - 0.3 * lightnessError / 0.9));
+      const matched = hueError <= 10 && saturationError <= 0.1 && lightnessError <= 0.1;
+      render();
+      if (!matched) {
+        setMessage(`${score}% match. Keep tuning the selected channel and try again.`);
+        return;
+      }
+      locked = true;
+      if (round === images.length - 1) {
+        complete = true;
+        setMessage(`${score}% match. All three studies complete — press Space to play again.`, 'success');
+      } else {
+        setMessage(`${score}% match. Nice eye — press Space for the next image.`, 'success');
+      }
+    }
+
+    function adjust(channel, direction) {
+      const [min, max] = bounds[channel];
+      const precision = channel === 'saturation' ? 1 : channel === 'lightness' ? 2 : 0;
+      player[channel] = Number(Math.max(min, Math.min(max, player[channel] + direction * steps[channel])).toFixed(precision));
+      render();
+    }
+
+    window.addEventListener('keydown', event => {
+      if (event.altKey || event.ctrlKey || event.metaKey) return;
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(event.key)) event.preventDefault();
+      if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+        if (!locked) selected = (selected + (event.key === 'ArrowDown' ? 1 : -1) + channels.length) % channels.length;
+        render();
+      } else if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+        if (!locked) adjust(channels[selected], event.key === 'ArrowRight' ? 1 : -1);
+      } else if (event.key === ' ') {
+        if (complete) startRound(0);
+        else if (locked) startRound(round + 1);
+        else submit();
+      }
+    });
+
+    document.querySelectorAll('.image-frame img').forEach(image => {
+      image.addEventListener('error', () => {
+        image.hidden = true;
+        image.parentElement.querySelector('.image-fallback').hidden = false;
+        setMessage('A CreativeHK image could not load. Check your connection, then reload.', 'error');
+      });
+    });
+
+    document.body.focus({ preventScroll: true });
+    startRound(0);
+  </script>
+</body>
+</html>
