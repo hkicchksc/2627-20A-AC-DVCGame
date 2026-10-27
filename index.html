@@ -20,186 +20,141 @@
     }
 
     * { box-sizing: border-box; }
-    body { margin: 0; min-width: 320px; min-height: 100vh; background: radial-gradient(ellipse at 50% 0%, #303329 0, #171816 55rem); }
+    body { width: 100%; min-width: 320px; height: 100vh; height: 100dvh; margin: 0; overflow: hidden; background: #171816; }
     body:focus { outline: none; }
-    main { width: min(1120px, calc(100% - 40px)); margin: 0 auto; padding: 30px 0 26px; }
-    header, .masthead, .round-info, .photo-head, .photo-foot, .controls-head, .control-row, .statusline, .footer { display: flex; align-items: center; justify-content: space-between; }
-    header { border-bottom: 1px solid var(--line); padding-bottom: 18px; }
-    .brand { display: flex; align-items: center; gap: 11px; font-size: 13px; font-weight: 760; letter-spacing: .14em; text-transform: uppercase; }
-    .brand-mark { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; color: #171816; background: var(--acid); font-size: 16px; }
-    .edition { color: var(--muted); font-size: 11px; letter-spacing: .16em; text-transform: uppercase; }
-    .intro { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 24px; padding: 34px 0 26px; }
-    .eyebrow { margin: 0 0 9px; color: var(--acid); font-size: 11px; font-weight: 750; letter-spacing: .18em; text-transform: uppercase; }
-    h1 { margin: 0; font-size: clamp(34px, 5vw, 57px); font-weight: 570; letter-spacing: -.055em; line-height: .98; }
-    .intro-copy { max-width: 300px; margin: 0 0 3px; color: #c2c1b8; font-size: 13px; line-height: 1.65; }
-    .round-info { gap: 17px; padding: 0 0 12px; color: var(--muted); font-size: 11px; letter-spacing: .13em; text-transform: uppercase; }
-    .round-count { color: var(--acid); font-weight: 750; }
-    .photos { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    .photo-card { min-width: 0; overflow: hidden; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
-    .photo-head { padding: 3px 3px 10px; font-size: 10px; font-weight: 760; letter-spacing: .15em; text-transform: uppercase; }
-    .photo-head span:last-child { color: var(--muted); font-weight: 550; letter-spacing: .08em; }
-    .image-frame { position: relative; display: grid; place-items: center; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 4px; background: #30312d; }
-    .image-frame img { width: 100%; height: 100%; object-fit: cover; }
-    .image-fallback { position: absolute; padding: 20px; color: #f2f0e9; font-size: 13px; text-align: center; }
+    main { position: fixed; inset: 0; width: 100%; height: 100vh; height: 100dvh; overflow: hidden; background: #171816; touch-action: none; }
+    .canvas { position: absolute; inset: 0; overflow: hidden; background: #171816; --split: 50%; }
+    .canvas img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; object-position: center; }
+    #original-image { z-index: 0; }
+    .tuned-window { position: absolute; z-index: 1; inset: 0; overflow: hidden; clip-path: inset(0 0 0 var(--split)); transition: clip-path 100ms ease-out; }
+    .split-guide { position: absolute; z-index: 3; top: 0; bottom: 0; left: var(--split); width: 2px; transform: translateX(-50%); background: rgba(255, 255, 255, .88); box-shadow: 0 0 14px rgba(0, 0, 0, .5); pointer-events: none; transition: left 100ms ease-out; }
+    .stage.dragging-split .tuned-window, .stage.dragging-split .split-guide { transition: none; }
+    .split-handle { position: absolute; top: 50%; left: 50%; display: grid; width: 38px; height: 38px; place-items: center; transform: translate(-50%, -50%); border: 1px solid rgba(255, 255, 255, .8); border-radius: 50%; color: white; background: rgba(20, 21, 19, .78); font-size: 17px; }
+    .float-panel { position: absolute; z-index: 5; border: 1px solid rgba(255, 255, 255, .16); border-radius: 10px; background: rgba(23, 24, 22, .82); box-shadow: 0 12px 38px rgba(0, 0, 0, .24); backdrop-filter: blur(16px); }
+    .level-info { position: absolute; z-index: 5; right: 22px; bottom: 22px; max-width: min(430px, calc(100vw - 180px)); color: #fff; text-align: right; text-shadow: 0 2px 14px rgba(0, 0, 0, .85); }
+    .level-title { margin: 0; font-size: clamp(38px, 5vw, 62px); font-weight: 800; line-height: .98; letter-spacing: .02em; }
+    .level-goal { margin: 8px 0 0; font-size: 13px; }
+    .level-timer { position: absolute; z-index: 6; top: 22px; left: 50%; margin: 0; transform: translateX(-50%); color: #f0efe8; font-size: 3.5rem; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; text-shadow: 0 2px 14px rgba(0, 0, 0, .85); }
+    .level-source { display: inline-block; margin-top: 7px; color: #f0efe8; font-size: 9px; letter-spacing: .1em; text-decoration-color: rgba(255,255,255,.7); text-underline-offset: 3px; text-transform: uppercase; }
+    .side-tag { position: absolute; z-index: 4; top: 22px; padding: 8px 11px; border: 1px solid rgba(255, 255, 255, .2); border-radius: 4px; color: white; background: rgba(20, 21, 19, .65); font-size: 9px; font-weight: 750; letter-spacing: .15em; text-transform: uppercase; pointer-events: none; }
+    .original-tag { left: 22px; }
+    .tuned-tag { right: 22px; }
+    .image-fallback { position: absolute; z-index: 4; inset: 0; display: grid; place-items: center; padding: 24px; color: #f2f0e9; background: rgba(20, 21, 19, .88); font-size: 14px; text-align: center; }
     .image-fallback[hidden] { display: none; }
-    .photo-foot { gap: 10px; padding: 11px 3px 2px; color: var(--muted); font-size: 10px; letter-spacing: .09em; text-transform: uppercase; }
-    .photo-foot span:last-child { color: #deddd5; text-align: right; }
-    .tuning { display: grid; grid-template-columns: 1fr 1.15fr; gap: 28px; align-items: center; margin-top: 18px; padding: 17px 20px; border: 1px solid var(--line); border-radius: 8px; background: #1d1e1b; }
-    .controls-head { margin-bottom: 8px; color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; }
-    .control-row { position: relative; min-height: 38px; padding: 0 9px; border-radius: 4px; color: #c5c4bc; font-size: 12px; }
-    .control-row[aria-current="true"] { color: #f5f4ee; background: #31352a; outline: 1px solid #596344; }
-    .channel-name { min-width: 90px; font-size: 10px; font-weight: 750; letter-spacing: .12em; }
-    .channel-value { color: var(--acid); font-variant-numeric: tabular-nums; font-size: 13px; }
-    .keys { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 7px 12px; color: #c8c7bd; font-size: 11px; }
-    .key-tip { display: flex; align-items: center; gap: 7px; white-space: nowrap; }
-    kbd { display: inline-grid; min-width: 23px; height: 23px; place-items: center; padding: 0 5px; border: 1px solid #64665d; border-bottom-width: 2px; border-radius: 4px; color: #f5f4ee; font: 700 11px ui-monospace, SFMono-Regular, Consolas, monospace; }
-    .statusline { min-height: 56px; gap: 18px; border-bottom: 1px solid var(--line); color: #cbc9c0; font-size: 12px; }
-    #message { margin: 0; line-height: 1.5; }
-    #message.success { color: var(--acid); }
-    #message.error { color: #ffad92; }
-    .attempts { flex: none; color: var(--muted); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; }
-    .footer { gap: 16px; padding-top: 16px; color: var(--muted); font-size: 10px; letter-spacing: .09em; text-transform: uppercase; }
-    .footer a { color: #d8d7ce; text-decoration-color: #77776e; text-underline-offset: 3px; }
+    .tuning { bottom: 22px; left: 22px; width: 170px; padding: 9px 11px; }
+    .score-emojis { color: var(--acid); font-size: 22px; line-height: 1; white-space: nowrap; }
+    #message { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 
     @media (max-width: 700px) {
-      main { width: min(100% - 24px, 540px); padding-top: 18px; }
-      .intro { grid-template-columns: 1fr; gap: 13px; padding: 28px 0 21px; }
-      .intro-copy { max-width: 440px; }
-      .photos { gap: 9px; }
-      .photo-card { padding: 7px; }
-      .photo-head { font-size: 9px; letter-spacing: .1em; }
-      .photo-foot { font-size: 9px; letter-spacing: .04em; }
-      .tuning { grid-template-columns: 1fr; gap: 15px; padding: 14px; }
-      .keys { justify-content: flex-start; }
+      .level-info { right: 12px; bottom: 12px; max-width: calc(100vw - 170px); }
+      .original-tag { left: 12px; }
+      .tuned-tag { right: 12px; }
+      .tuning { bottom: 12px; left: 12px; padding: 9px 10px; }
     }
 
     @media (max-width: 440px) {
-      .edition { font-size: 9px; }
-      .photos { grid-template-columns: 1fr; }
-      .image-frame { aspect-ratio: 16 / 8.5; }
-      .round-info { padding-bottom: 9px; }
-      .photo-head { font-size: 10px; }
-      .photo-foot { font-size: 10px; }
-      .statusline { align-items: flex-start; padding: 13px 0; }
-      .attempts { padding-top: 2px; }
-      .footer { align-items: flex-start; flex-direction: column; gap: 8px; }
+      .level-info { max-width: calc(100vw - 180px); }
+      .level-title { font-size: clamp(24px, 7vw, 30px); }
+      .level-goal { font-size: 11px; }
+      .tuning { padding: 9px; }
     }
-  </style>
+
+    @media (max-height: 650px) and (min-width: 701px) {
+      .tuning { bottom: 12px; }
+      .side-tag { top: 22px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .tuned-window, .split-guide { transition: none; }
+    }
+</style>
 </head>
 <body tabindex="0">
-  <main>
-    <header>
-      <div class="brand"><span class="brand-mark" aria-hidden="true">◒</span><span>Color Study</span></div>
-      <div class="edition">A tiny image-matching game</div>
-    </header>
+  <main class="stage">
+    <section class="canvas" aria-label="Original photo on the left, tuned photo on the right">
+      <img id="original-image" alt="Original CreativeHK photograph" decoding="async">
+      <div class="tuned-window"><img id="tuned-image" alt="The same photograph with your hue, saturation, and lightness adjustments" decoding="async"></div>
+      <div class="split-guide" aria-hidden="true"><span class="split-handle">↔</span></div>
+      <span class="side-tag original-tag">Original</span>
+      <span class="side-tag tuned-tag">Tuning</span>
+      <div class="image-fallback" id="image-fallback" role="status" hidden>Image unavailable. Check your internet connection and reload.</div>
+    </section>
+    <p class="level-timer"><span id="stage-timer">00:59</span></p>
 
-    <section class="intro" aria-labelledby="title">
-      <div>
-        <p class="eyebrow">Look closer · tune by feel</p>
-        <h1 id="title">Find the<br>right color.</h1>
-      </div>
-      <p class="intro-copy">Adjust hue, saturation, and lightness until your original feels like the reference. Three images. Arrow keys only.</p>
+    <section class="level-info" aria-label="Current level">
+      <h1 class="level-title">關卡 #<span id="level-number">1</span></h1>
+      <p class="level-goal">調整相片直至相似度達 95%</p>
+      <a class="level-source" href="https://www.creativehk.edu.hk/" target="_blank" rel="noopener noreferrer">Image source · CreativeHK</a>
     </section>
 
-    <div class="round-info"><span>Color match</span><span class="round-count" id="round-count">01 / 03</span></div>
-
-    <section class="photos" aria-label="Compare your image with the color reference">
-      <figure class="photo-card">
-        <figcaption class="photo-head"><span>Your image</span><span>Original · your tune</span></figcaption>
-        <div class="image-frame">
-          <img id="player-image" alt="Original CreativeHK photograph, adjusted by your color controls" decoding="async">
-          <span class="image-fallback" hidden>Image unavailable. Check your internet connection and reload.</span>
-        </div>
-        <div class="photo-foot"><span id="player-caption">CreativeHK · source</span><span>Adjust this image</span></div>
-      </figure>
-      <figure class="photo-card">
-        <figcaption class="photo-head"><span>Reference</span><span>Target · color study</span></figcaption>
-        <div class="image-frame">
-          <img id="target-image" alt="The same CreativeHK photograph with the target color treatment" decoding="async">
-          <span class="image-fallback" hidden>Image unavailable. Check your internet connection and reload.</span>
-        </div>
-        <div class="photo-foot"><span id="target-caption">CreativeHK · source</span><span>Match this color</span></div>
-      </figure>
+    <section class="tuning float-panel" aria-label="Match rating">
+      <div class="score-emojis" id="score-value" role="img" aria-label="50% match">🐭🐭🐭🐭🐭</div>
+      <p id="message" role="status" aria-live="polite">Color match updated.</p>
     </section>
-
-    <section class="tuning" aria-label="Color controls">
-      <div>
-        <div class="controls-head"><span>Color channels</span><span>Selected channel</span></div>
-        <div class="control-row" data-channel="hue" aria-current="true" role="group" aria-label="Hue: 0 degrees">
-          <span class="channel-name">01 / HUE</span><span>↔</span><span class="channel-value" id="hue-value">0°</span>
-        </div>
-        <div class="control-row" data-channel="saturation" aria-current="false" role="group" aria-label="Saturation: 1.0 times">
-          <span class="channel-name">02 / SATURATION</span><span>↔</span><span class="channel-value" id="saturation-value">1.0×</span>
-        </div>
-        <div class="control-row" data-channel="lightness" aria-current="false" role="group" aria-label="Lightness: 1.00 times">
-          <span class="channel-name">03 / LIGHTNESS</span><span>↔</span><span class="channel-value" id="lightness-value">1.00×</span>
-        </div>
-      </div>
-      <div>
-        <div class="controls-head"><span>Keyboard</span><span>Only the arrows and space</span></div>
-        <div class="keys" aria-label="Keyboard instructions">
-          <span class="key-tip"><kbd>↑</kbd><kbd>↓</kbd> choose channel</span>
-          <span class="key-tip"><kbd>←</kbd><kbd>→</kbd> adjust value</span>
-          <span class="key-tip"><kbd>Space</kbd> submit</span>
-        </div>
-      </div>
-    </section>
-
-    <div class="statusline">
-      <p id="message" role="status" aria-live="polite">Use ↑ ↓ to choose a channel, then ← → to tune it. Press Space to submit.</p>
-      <span class="attempts" id="attempts">Attempts · 0</span>
-    </div>
-
-    <footer class="footer">
-      <span>Images courtesy of <a href="https://www.creativehk.edu.hk/" target="_blank" rel="noopener noreferrer">CreativeHK</a></span>
-      <span>Hue · saturation · lightness</span>
-    </footer>
   </main>
 
   <script>
     const images = [
       { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4015571178714403489.webp', caption: 'School volleyball · CreativeHK' },
       { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4010448831913228017.webp', caption: 'Beach volleyball · CreativeHK' },
-      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4013348841663313305.jpg', caption: 'Art exhibition · CreativeHK' }
+      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4013348841663313305.jpg', caption: 'Art exhibition · CreativeHK' },
+      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4013505767495918965.webp', caption: 'School basketball · CreativeHK' },
+      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4012019490690778221.webp', caption: 'Creative film visit · CreativeHK' },
+      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4011773240712339459.webp', caption: 'Dunhuang study tour · CreativeHK' },
+      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4011284848949975254.webp', caption: 'Outdoor volleyball · CreativeHK' },
+      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4009203920534737778.webp', caption: 'Island field trip · CreativeHK' },
+      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4009116567384301493.webp', caption: 'Climbing activity · CreativeHK' },
+      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4009042070345970752.webp', caption: 'Beach cleanup · CreativeHK' },
+      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4008907981415591392.webp', caption: 'School excursion · CreativeHK' },
+      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4006114497890051393.webp', caption: 'Dunhuang field trip · CreativeHK' },
+      { src: 'https://a.storyblok.com/f/246847/1334x1334/6e0617894a/dsc00535.webp', caption: 'Hands-on design workshop · CreativeHK' },
+      { src: 'https://a.storyblok.com/f/246847/2102x1402/1622733f17/dsc02505_-1.webp', caption: 'Gallery movement workshop · CreativeHK' },
+      { src: 'https://a.storyblok.com/f/246847/3976x2652/121f8009e4/dsc09106-1.webp', caption: 'Studio critique · CreativeHK' }
     ];
+    for (let i = images.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [images[i], images[j]] = [images[j], images[i]];
+    }
     const channels = ['hue', 'saturation', 'lightness'];
     const steps = { hue: 5, saturation: 0.1, lightness: 0.05 };
     const bounds = { hue: [-180, 180], saturation: [0.4, 2], lightness: [0.55, 1.45] };
-    const playerImage = document.querySelector('#player-image');
-    const targetImage = document.querySelector('#target-image');
+    const stage = document.querySelector('.canvas');
+    const originalImage = document.querySelector('#original-image');
+    const tunedImage = document.querySelector('#tuned-image');
     const message = document.querySelector('#message');
     let round = 0;
-    let attempts = 0;
     let selected = 0;
-    let locked = false;
-    let complete = false;
+    let split = 50;
+    let advanceTimer = 0;
+    let countdownInterval = 0;
+    let stageDeadline = 0;
     let player;
-    let target;
 
-    const randomStep = (min, max, step) => min + Math.floor(Math.random() * ((max - min) / step + 1)) * step;
+    const randomStep = (min, max, step) => Number((min + Math.floor(Math.random() * ((max - min) / step + 1)) * step).toFixed(2));
 
     // shortcut: lightness uses CSS brightness; use a same-origin pixel transform when exact HSL is required.
     function filterFor(color) {
       return `hue-rotate(${color.hue}deg) saturate(${color.saturation}) brightness(${color.lightness})`;
     }
 
-    function formatChannel(channel, value) {
-      if (channel === 'hue') return `${value}°`;
-      return `${value.toFixed(channel === 'saturation' ? 1 : 2)}×`;
+
+    function matchState() {
+      const hueError = Math.abs(player.hue);
+      const saturationError = Math.abs(player.saturation - 1);
+      const lightnessError = Math.abs(player.lightness - 1);
+      const score = Math.max(0, Math.round(100 * (1 - 0.4 * hueError / 180 - 0.3 * saturationError / 1.6 - 0.3 * lightnessError / 0.9)));
+      return { score, matched: score >= 95 };
     }
 
     function render() {
-      playerImage.style.filter = filterFor(player);
-      targetImage.style.filter = filterFor(target);
-      channels.forEach((channel, index) => {
-        const row = document.querySelector(`[data-channel="${channel}"]`);
-        const value = player[channel];
-        row.setAttribute('aria-current', String(index === selected));
-        row.setAttribute('aria-label', `${channel}: ${formatChannel(channel, value)}${index === selected ? ', selected' : ''}`);
-        document.querySelector(`#${channel}-value`).textContent = formatChannel(channel, value);
-      });
-      document.querySelector('#round-count').textContent = `${String(round + 1).padStart(2, '0')} / ${String(images.length).padStart(2, '0')}`;
-      document.querySelector('#attempts').textContent = `Attempts · ${attempts}`;
+      tunedImage.style.filter = filterFor(player);
+      stage.style.setProperty('--split', `${split}%`);
+      const { score } = matchState();
+      const cheeseCount = Math.max(0, Math.min(5, Math.floor((score - 50) / 10)));
+      const mouseCount = 5 - cheeseCount;
+      const badge = document.querySelector('#score-value');
+      badge.textContent = `${'🧀'.repeat(cheeseCount)}${'🐭'.repeat(mouseCount)}`;
+      badge.setAttribute('aria-label', `${score}% match, ${mouseCount} mice and ${cheeseCount} cheese`);
+      document.querySelector('#level-number').textContent = String(round + 1);
     }
 
     function setMessage(text, kind = '') {
@@ -208,50 +163,35 @@
     }
 
     function startRound(index) {
-      round = index;
-      attempts = 0;
+      if (advanceTimer) clearTimeout(advanceTimer);
+      if (countdownInterval) clearInterval(countdownInterval);
+      advanceTimer = 0;
+      countdownInterval = 0;
+      round = index % images.length;
       selected = 0;
-      locked = false;
-      complete = false;
-      player = { hue: 0, saturation: 1, lightness: 1 };
-      target = {
-        hue: randomStep(-180, 180, 5),
-        saturation: Number(randomStep(0.4, 2, 0.1).toFixed(1)),
-        lightness: Number(randomStep(0.55, 1.45, 0.05).toFixed(2))
+      split = 50;
+      player = {
+        hue: randomStep(30, 120, 5) * (Math.random() < 0.5 ? -1 : 1),
+        saturation: randomStep(0.4, 1.8, 0.1),
+        lightness: randomStep(0.65, 1.4, 0.05)
       };
       const image = images[round];
-      playerImage.src = image.src;
-      targetImage.src = image.src;
-      document.querySelector('#player-caption').textContent = image.caption;
-      document.querySelector('#target-caption').textContent = image.caption;
-      document.querySelectorAll('.image-frame').forEach(frame => {
-        frame.querySelector('.image-fallback').hidden = true;
-        frame.querySelector('img').hidden = false;
-      });
-      setMessage('Use ↑ ↓ to choose a channel, then ← → to tune it. Press Space to submit.');
+      document.querySelector('#image-fallback').hidden = true;
+      originalImage.src = image.src;
+      tunedImage.src = image.src;
+      originalImage.alt = `Original photo: ${image.caption}`;
+      tunedImage.alt = `Tuned photo: ${image.caption}`;
+      stageDeadline = Date.now() + 59_000;
+      const timer = document.querySelector('#stage-timer');
+      timer.textContent = '00:59';
+      countdownInterval = setInterval(() => {
+        const seconds = Math.max(0, Math.ceil((stageDeadline - Date.now()) / 1000));
+        timer.textContent = `00:${String(seconds).padStart(2, '0')}`;
+        if (seconds === 0) startRound(round + 1);
+      }, 250);
       render();
-    }
-
-    function submit() {
-      if (locked) return;
-      attempts += 1;
-      const hueError = Math.abs(((player.hue - target.hue + 540) % 360) - 180);
-      const saturationError = Math.abs(player.saturation - target.saturation);
-      const lightnessError = Math.abs(player.lightness - target.lightness);
-      const score = Math.round(100 * (1 - 0.4 * hueError / 180 - 0.3 * saturationError / 1.6 - 0.3 * lightnessError / 0.9));
-      const matched = hueError <= 10 && saturationError <= 0.1 && lightnessError <= 0.1;
-      render();
-      if (!matched) {
-        setMessage(`${score}% match. Keep tuning the selected channel and try again.`);
-        return;
-      }
-      locked = true;
-      if (round === images.length - 1) {
-        complete = true;
-        setMessage(`${score}% match. All three studies complete — press Space to play again.`, 'success');
-      } else {
-        setMessage(`${score}% match. Nice eye — press Space for the next image.`, 'success');
-      }
+      const { score } = matchState();
+      setMessage(`${score}% match · tune the right side to the original.`);
     }
 
     function adjust(channel, direction) {
@@ -259,28 +199,86 @@
       const precision = channel === 'saturation' ? 1 : channel === 'lightness' ? 2 : 0;
       player[channel] = Number(Math.max(min, Math.min(max, player[channel] + direction * steps[channel])).toFixed(precision));
       render();
+      const { score, matched } = matchState();
+      if (matched) {
+        setMessage(round === images.length - 1 ? `All ${images.length} images matched · starting a new set…` : 'Match found · loading the next image…', 'success');
+        if (!advanceTimer) advanceTimer = setTimeout(() => startRound(round + 1), 1000);
+      } else {
+        if (advanceTimer) clearTimeout(advanceTimer);
+        advanceTimer = 0;
+        setMessage(`${score}% match · tune the right side to the original.`);
+      }
     }
 
     window.addEventListener('keydown', event => {
       if (event.altKey || event.ctrlKey || event.metaKey) return;
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(event.key)) event.preventDefault();
-      if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
-        if (!locked) selected = (selected + (event.key === 'ArrowDown' ? 1 : -1) + channels.length) % channels.length;
+      if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(event.key)) return;
+      event.preventDefault();
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+        split = Math.max(2, Math.min(98, split + (event.key === 'ArrowRight' ? 2 : -2)));
         render();
-      } else if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
-        if (!locked) adjust(channels[selected], event.key === 'ArrowRight' ? 1 : -1);
-      } else if (event.key === ' ') {
-        if (complete) startRound(0);
-        else if (locked) startRound(round + 1);
-        else submit();
+      } else if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+        adjust(channels[selected], event.key === 'ArrowUp' ? 1 : -1);
+      } else {
+        selected = (selected + 1) % channels.length;
+        render();
       }
     });
 
-    document.querySelectorAll('.image-frame img').forEach(image => {
+    const gameRoot = document.querySelector('.stage');
+    let touchGesture = null;
+
+    gameRoot.addEventListener('pointerdown', event => {
+      if (event.pointerType !== 'touch' || !event.isPrimary || event.target.closest('a')) return;
+      touchGesture = { pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, lastX: event.clientX, lastY: event.clientY, pendingY: 0, axis: null };
+    });
+
+    gameRoot.addEventListener('pointermove', event => {
+      if (!touchGesture || event.pointerId !== touchGesture.pointerId) return;
+      const totalX = event.clientX - touchGesture.startX;
+      const totalY = event.clientY - touchGesture.startY;
+      if (!touchGesture.axis) {
+        if (Math.hypot(totalX, totalY) < 8) return;
+        touchGesture.axis = Math.abs(totalX) > Math.abs(totalY) ? 'horizontal' : 'vertical';
+        if (touchGesture.axis === 'horizontal') gameRoot.classList.add('dragging-split');
+      }
+      if (touchGesture.axis === 'horizontal') {
+        split = Math.max(2, Math.min(98, split + (event.clientX - touchGesture.lastX) / gameRoot.clientWidth * 100));
+        render();
+      } else {
+        touchGesture.pendingY += event.clientY - touchGesture.lastY;
+        const steps = Math.trunc(Math.abs(touchGesture.pendingY) / 24);
+        if (steps) {
+          const direction = touchGesture.pendingY < 0 ? 1 : -1;
+          for (let i = 0; i < steps; i += 1) adjust(channels[selected], direction);
+          touchGesture.pendingY += direction * steps * 24;
+        }
+      }
+      touchGesture.lastX = event.clientX;
+      touchGesture.lastY = event.clientY;
+    });
+
+    gameRoot.addEventListener('pointerup', event => {
+      if (!touchGesture || event.pointerId !== touchGesture.pointerId) return;
+      if (!touchGesture.axis) {
+        selected = (selected + 1) % channels.length;
+        render();
+      }
+      gameRoot.classList.remove('dragging-split');
+      touchGesture = null;
+    });
+
+    gameRoot.addEventListener('pointercancel', event => {
+      if (touchGesture && event.pointerId === touchGesture.pointerId) {
+        gameRoot.classList.remove('dragging-split');
+        touchGesture = null;
+      }
+    });
+
+    [originalImage, tunedImage].forEach(image => {
       image.addEventListener('error', () => {
-        image.hidden = true;
-        image.parentElement.querySelector('.image-fallback').hidden = false;
-        setMessage('A CreativeHK image could not load. Check your connection, then reload.', 'error');
+        document.querySelector('#image-fallback').hidden = false;
+        setMessage('A CreativeHK image could not load. Check your connection and reload.', 'error');
       });
     });
 
