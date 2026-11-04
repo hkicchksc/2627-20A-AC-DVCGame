@@ -38,6 +38,10 @@
     .level-source { display: inline-block; margin-top: 7px; color: #f0efe8; font-size: 9px; letter-spacing: .1em; text-decoration-color: rgba(255,255,255,.7); text-underline-offset: 3px; text-transform: uppercase; }
     .side-tag { position: absolute; z-index: 4; top: 22px; padding: 8px 11px; border: 1px solid rgba(255, 255, 255, .2); border-radius: 4px; color: white; background: rgba(20, 21, 19, .65); font-size: 9px; font-weight: 750; letter-spacing: .15em; text-transform: uppercase; pointer-events: none; }
     .original-tag { left: 22px; }
+    .joystick-note, #allow-joystick { position: absolute; z-index: 7; left: 22px; }
+    .joystick-note { top: 108px; max-width: 260px; margin: 0; color: #f0efe8; font-size: 12px; text-shadow: 0 2px 14px rgba(0, 0, 0, .85); }
+    #allow-joystick { top: 64px; padding: 8px 11px; border: 1px solid rgba(255, 255, 255, .2); border-radius: 4px; color: white; background: rgba(20, 21, 19, .65); font: inherit; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; cursor: pointer; }
+    .joystick-note[hidden], #allow-joystick[hidden] { display: none; }
     .tuned-tag { right: 22px; }
     .image-fallback { position: absolute; z-index: 4; inset: 0; display: grid; place-items: center; padding: 24px; color: #f2f0e9; background: rgba(20, 21, 19, .88); font-size: 14px; text-align: center; }
     .image-fallback[hidden] { display: none; }
@@ -79,6 +83,8 @@
       <div class="image-fallback" id="image-fallback" role="status" hidden>Image unavailable. Check your internet connection and reload.</div>
     </section>
     <p class="level-timer"><span id="stage-timer">00:59</span></p>
+    <button type="button" id="allow-joystick" hidden>Allow joystick</button>
+    <p id="joystick-status" class="joystick-note" role="status" hidden></p>
 
     <section class="level-info" aria-label="Current level">
       <h1 class="level-title">關卡 #<span id="level-number">1</span></h1>
@@ -92,6 +98,7 @@
     </section>
   </main>
 
+  <script src="joystick.js"></script>
   <script>
     const images = [
       { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4015571178714403489.webp', caption: 'School volleyball · CreativeHK' },
@@ -210,19 +217,23 @@
       }
     }
 
+    function applyKey(key) {
+      if (key === 'ArrowLeft' || key === 'ArrowRight') {
+        split = Math.max(2, Math.min(98, split + (key === 'ArrowRight' ? 2 : -2)));
+        render();
+      } else if (key === 'ArrowUp' || key === 'ArrowDown') {
+        adjust(channels[selected], key === 'ArrowUp' ? 1 : -1);
+      } else if (key === ' ') {
+        selected = (selected + 1) % channels.length;
+        render();
+      }
+    }
+
     window.addEventListener('keydown', event => {
       if (event.altKey || event.ctrlKey || event.metaKey) return;
       if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(event.key)) return;
       event.preventDefault();
-      if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
-        split = Math.max(2, Math.min(98, split + (event.key === 'ArrowRight' ? 2 : -2)));
-        render();
-      } else if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
-        adjust(channels[selected], event.key === 'ArrowUp' ? 1 : -1);
-      } else {
-        selected = (selected + 1) % channels.length;
-        render();
-      }
+      applyKey(event.key);
     });
 
     const gameRoot = document.querySelector('.stage');
@@ -284,6 +295,36 @@
 
     document.body.focus({ preventScroll: true });
     startRound(0);
+
+    const joystickNote = document.querySelector('#joystick-status');
+    const allowJoystick = document.querySelector('#allow-joystick');
+    const serialState = { buffer: '', held: '' };
+    const joy = createJoystick({
+      onText(chunk) {
+        for (const event of readJoystickLines(serialState, chunk)) {
+          if (event.key && !event.up) applyKey(event.key);
+        }
+      },
+      onStatus(kind, message) {
+        const connected = kind === 'connected';
+        joystickNote.hidden = allowJoystick.hidden = connected;
+        joystickNote.textContent = message || {
+          'needs-permission': 'Click Allow joystick once. After that it connects on its own.',
+          disconnected: 'Joystick disconnected.',
+          error: 'Joystick error.'
+        }[kind] || '';
+      }
+    });
+    allowJoystick.addEventListener('click', () => {
+      joy.requestPort();
+    });
+    window.addEventListener('keydown', event => {
+      if (event.altKey || event.ctrlKey || event.metaKey) return;
+      if (event.key !== 'c' && event.key !== 'C') return;
+      event.preventDefault();
+      joy.disconnect().finally(() => { location.href = 'console.html?map=1'; });
+    });
+    joy.autoConnect();
   </script>
 </body>
 </html>

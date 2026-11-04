@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Game console serial tester</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: ui-monospace, Consolas, monospace;
+      background: #171816;
+      color: #f2f0e9;
+    }
+    body { margin: 24px; max-width: 720px; }
+    h1, h2, p { font-family: system-ui, sans-serif; }
+    h1 { font-size: 1.25rem; }
+    h2 { font-size: 0.95rem; margin: 16px 0 8px; }
+    p { color: #aaa99f; line-height: 1.5; }
+    button {
+      margin: 0 8px 8px 0;
+      padding: 10px 14px;
+      border: 1px solid #44453f;
+      border-radius: 8px;
+      background: #20211e;
+      color: inherit;
+      cursor: pointer;
+    }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    #last-key {
+      margin: 16px 0;
+      padding: 16px;
+      border: 1px solid #d1fb73;
+      border-radius: 10px;
+      background: #20211e;
+      font-size: 1.1rem;
+    }
+    #last-key strong { color: #d1fb73; font-size: 1.4rem; }
+    #pad span {
+      display: inline-block;
+      min-width: 4.2rem;
+      margin: 0 6px 6px 0;
+      padding: 8px 10px;
+      border: 1px solid #44453f;
+      border-radius: 8px;
+      text-align: center;
+      cursor: pointer;
+    }
+    #pad span.on { border-color: #d1fb73; color: #d1fb73; }
+    pre {
+      padding: 12px;
+      border: 1px solid #44453f;
+      border-radius: 8px;
+      background: #0f100e;
+      max-height: 280px;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .error { color: #ff8a80; }
+    code { color: #f2f0e9; }
+  </style>
+</head>
+<body>
+  <h1>Game console serial tester</h1>
+  <p>
+    Previously allowed joysticks connect on open at 115200 baud.
+    The board sends <code>M_D11</code> or <code>S_D4,S_D5</code> while those pins are held, and <code>NONE</code> when they are released. Press <strong>C</strong> to return to the game.
+    Click <strong>Map controls</strong>, then press each button when asked. Click a name to set just that one.
+  </p>
+  <button type="button" id="connect">Connect to Arduino</button>
+  <button type="button" id="disconnect" disabled>Disconnect</button>
+  <button type="button" id="run-samples">Run sample parser test</button>
+  <button type="button" id="map">Map controls</button>
+  <button type="button" id="skip-map" disabled>Skip</button>
+  <p id="map-prompt"></p>
+
+  <div id="last-key">Last recognized key: <strong id="key-label">—</strong></div>
+  <div id="pad"></div>
+  <div id="status" role="status"></div>
+  <h2>Raw log</h2>
+  <pre id="output"></pre>
+
+  <script src="joystick.js"></script>
+  <script>
+    const connectButton = document.getElementById('connect');
+    const disconnectButton = document.getElementById('disconnect');
+    const sampleButton = document.getElementById('run-samples');
+    const output = document.getElementById('output');
+    const keyLabel = document.getElementById('key-label');
+    const status = document.getElementById('status');
+    const pad = document.getElementById('pad');
+    const mapPromptEl = document.getElementById('map-prompt');
+    const skipMapButton = document.getElementById('skip-map');
+
+    const chips = {};
+    let mapAt = -1;
+
+    joystickControls.forEach(([name], index) => {
+      const chip = document.createElement('span');
+      chip.addEventListener('click', () => {
+        mapAt = index;
+        mapPrompt();
+      });
+      pad.appendChild(chip);
+      chips[name] = chip;
+    });
+
+    function refreshChips() {
+      for (const [name] of joystickControls) {
+        const pin = Object.keys(pinMap).find(key => pinMap[key] === name);
+        chips[name].textContent = pin ? `${name} ${pin}` : name;
+      }
+    }
+
+    function mapPrompt() {
+      for (const chip of Object.values(chips)) chip.classList.remove('on');
+      if (mapAt < 0 || mapAt >= joystickControls.length) {
+        mapPromptEl.textContent = mapAt >= joystickControls.length ? 'Mapping done.' : '';
+        mapAt = -1;
+        skipMapButton.disabled = true;
+        refreshChips();
+        return;
+      }
+      skipMapButton.disabled = false;
+      mapPromptEl.textContent = `Press ${joystickControls[mapAt][0]}, then let go. ${mapAt + 1} of ${joystickControls.length}.`;
+      chips[joystickControls[mapAt][0]].classList.add('on');
+      refreshChips();
+    }
+
+    function appendLog(line) {
+      output.textContent += line + '\n';
+      output.scrollTop = output.scrollHeight;
+    }
+
+    function showHeld(name) {
+      keyLabel.textContent = name;
+      appendLog(`→ ${name}`);
+      if (mapAt >= 0) return;
+      for (const chip of Object.values(chips)) chip.classList.remove('on');
+      if (chips[name]) chips[name].classList.add('on');
+    }
+
+    function showReleased() {
+      keyLabel.textContent = 'Released';
+      appendLog('→ Released');
+    }
+
+    function showUnrecognized(raw) {
+      appendLog(`? unrecognized: ${JSON.stringify(raw)}`);
+    }
+
+    const serialState = { buffer: '', held: '' };
+
+    function handleIncomingChunk(chunk) {
+      const names = [];
+      for (const event of readJoystickLines(serialState, chunk)) {
+        if (event.unknown) showUnrecognized(event.unknown);
+        else if (event.up) {
+          showReleased();
+          names.push('Released');
+        } else {
+          if (mapAt >= 0 && mapAt < joystickControls.length) {
+            assignJoystickPin(event.pin, joystickControls[mapAt][0]);
+            showHeld(pinMap[event.pin] || event.pin);
+            mapAt += 1;
+            mapPrompt();
+          } else {
+            showHeld(pinMap[event.pin] || event.pin);
+            refreshChips();
+          }
+          names.push(event.pin);
+        }
+      }
+      return names;
+    }
+
+    function setStatus(kind, message) {
+      const copy = {
+        connected: 'Connected. Press a joystick button.',
+        'needs-permission': 'Click Connect once to allow the joystick. It reconnects after that.',
+        disconnected: 'Disconnected.',
+        error: 'Joystick error.'
+      };
+      status.textContent = message || copy[kind] || '';
+      status.className = kind === 'error' ? 'error' : '';
+      const connected = kind === 'connected';
+      connectButton.disabled = connected;
+      disconnectButton.disabled = !connected;
+    }
+
+    const joy = createJoystick({
+      onText: handleIncomingChunk,
+      onStatus: setStatus
+    });
+
+    connectButton.addEventListener('click', () => {
+      joy.requestPort();
+    });
+
+    disconnectButton.addEventListener('click', () => {
+      serialState.buffer = '';
+      serialState.held = '';
+      joy.disconnect();
+    });
+
+    document.getElementById('map').addEventListener('click', () => {
+      mapAt = 0;
+      mapPrompt();
+    });
+
+    skipMapButton.addEventListener('click', () => {
+      if (mapAt < 0) return;
+      mapAt += 1;
+      mapPrompt();
+    });
+
+    refreshChips();
+    if (new URLSearchParams(location.search).get('map') === '1') {
+      mapAt = 0;
+      mapPrompt();
+    }
+    window.addEventListener('keydown', event => {
+      if (event.altKey || event.ctrlKey || event.metaKey) return;
+      if (event.key !== 'c' && event.key !== 'C') return;
+      event.preventDefault();
+      joy.disconnect().finally(() => { location.href = 'index.html'; });
+    });
+    joy.autoConnect();
+
+    sampleButton.addEventListener('click', () => {
+      output.textContent = '';
+      keyLabel.textContent = '—';
+      mapAt = -1;
+      serialState.buffer = '';
+      serialState.held = '';
+      const cases = [
+        [['M_D11\r\n', 'M_D11\r\n'], ['D11']],
+        [['NONE\r\n'], ['Released']],
+        [['M_', 'D12\r\n'], ['D12']],
+        [['NONE\r\n', 'NOPE\n'], ['Released']],
+        [['S_D2\r\n', 'S_D2\r\n', 'S_D3\r\n'], ['S_D2', 'S_D3']],
+        [['S_D4,S_D5,S_D6,S_D7,S_D8\r\n', 'S_D4,S_D5,S_D6,S_D7,S_D8\r\n', 'S_D4,S_D9\r\n'], ['S_D4', 'S_D5', 'S_D6', 'S_D7', 'S_D8', 'S_D9']]
+      ];
+      const misses = [];
+      cases.forEach(([chunks, names], index) => {
+        const got = chunks.flatMap(chunk => handleIncomingChunk(chunk));
+        if (got.join() !== names.join()) misses.push(`#${index + 1} expected ${names.join(', ') || 'nothing'} got ${got.join(', ') || 'nothing'}`);
+      });
+      appendLog(misses.length ? misses.join('\n') : '--- parser test passed ---');
+      status.className = misses.length ? 'error' : '';
+      status.textContent = misses.length ? 'Parser test failed.' : 'Parser test passed.';
+    });
+
+  </script>
+</body>
+</html>
