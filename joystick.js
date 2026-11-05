@@ -1,5 +1,5 @@
 // shortcut: opens the first granted port that succeeds, upgrade when two allowed devices must be chosen.
-// shortcut: one hold is one step, upgrade if a direction should repeat while its M_ line keeps arriving.
+// shortcut: repeat events stay flagged, movement uses the first edge only.
 const pinKeys = {};
 const pinMap = {};
 const joystickControls = [
@@ -86,8 +86,7 @@ function readJoystickLines(state, chunk) {
     const prev = state.held ? state.held.split(',') : [];
     state.held = pins.join(',');
     for (const pin of pins) {
-      if (prev.includes(pin)) continue;
-      events.push({ pin, name: pinMap[pin] || pin, key: pinKeys[pin] || '' });
+      events.push({ pin, name: pinMap[pin] || pin, key: pinKeys[pin] || '', repeat: prev.includes(pin) });
     }
   }
   return events;

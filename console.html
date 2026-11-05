@@ -158,7 +158,7 @@
         else if (event.up) {
           showReleased();
           names.push('Released');
-        } else {
+        } else if (!event.repeat) {
           if (mapAt >= 0 && mapAt < joystickControls.length) {
             assignJoystickPin(event.pin, joystickControls[mapAt][0]);
             showHeld(pinMap[event.pin] || event.pin);
@@ -223,7 +223,8 @@
       if (event.altKey || event.ctrlKey || event.metaKey) return;
       if (event.key !== 'c' && event.key !== 'C') return;
       event.preventDefault();
-      joy.disconnect().finally(() => { location.href = 'index.html'; });
+      const back = new URLSearchParams(location.search).get('back');
+      joy.disconnect().finally(() => { location.href = back === 'v2' ? 'v2.html' : 'index.html'; });
     });
     joy.autoConnect();
 

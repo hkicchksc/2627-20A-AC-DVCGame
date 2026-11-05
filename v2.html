@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#171816">
+  <title>Color Study v2</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+      background: #171816;
+      color: #f2f0e9;
+      --acid: #d1fb73;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; height: 100vh; height: 100dvh; overflow: hidden; background: #171816; }
+    #board { position: fixed; inset: 0; display: flex; }
+    .strip { position: relative; flex: 1; overflow: hidden; }
+    .strip img {
+      position: absolute;
+      top: 0;
+      height: 100%;
+      width: 1100%;
+      max-width: none;
+      left: calc(var(--i) * -100%);
+      object-fit: cover;
+    }
+    .mark {
+      position: absolute;
+      z-index: 4;
+      bottom: 8px;
+      left: 0;
+      right: 0;
+      font-size: 56px;
+      line-height: 1;
+      text-align: center;
+      pointer-events: none;
+    }
+    .box {
+      position: absolute;
+      z-index: 3;
+      bottom: 12px;
+      width: calc(100% / 11);
+      pointer-events: none;
+      font-size: min(68px, 12vw);
+      line-height: 1;
+      text-align: center;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, .85);
+    }
+    .level-info {
+      position: fixed;
+      z-index: 6;
+      top: 10px;
+      left: 50%;
+      max-width: calc(100vw - 36px);
+      transform: translateX(-50%);
+      color: #fff;
+      text-align: center;
+      text-shadow: 0 2px 14px rgba(0, 0, 0, .85);
+      pointer-events: none;
+    }
+    .level-timer {
+      margin: 6px 0 0;
+      color: #f0efe8;
+      font-size: 3.5rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+      text-shadow: 0 2px 14px rgba(0, 0, 0, .85);
+    }
+    .level-title { margin: 0; font-size: clamp(38px, 5vw, 62px); font-weight: 800; line-height: .98; letter-spacing: .02em; }
+    .level-goal, #stage-label { margin: 8px 0 0; font-size: 13px; }
+    #stage-label { font-weight: 700; }
+    @media (max-width: 440px) {
+      .level-title { font-size: clamp(24px, 7vw, 30px); }
+      .level-goal { font-size: 11px; }
+    }
+    #fallback {
+      position: fixed;
+      z-index: 5;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: rgba(20, 21, 19, .88);
+      text-align: center;
+    }
+    #fallback[hidden] { display: none; }
+    #allow-joystick {
+      position: fixed;
+      z-index: 7;
+      top: 18px;
+      left: 18px;
+      padding: 8px 11px;
+      border: 1px solid rgba(255, 255, 255, .2);
+      border-radius: 4px;
+      color: white;
+      background: rgba(20, 21, 19, .65);
+      font: inherit;
+      font-size: 11px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+    #joystick-status { position: fixed; z-index: 7; top: 64px; left: 18px; max-width: 260px; margin: 0; font-size: 12px; }
+    #allow-joystick[hidden], #joystick-status[hidden] { display: none; }
+  </style>
+</head>
+<body>
+  <div id="board"></div>
+  <section class="level-info" aria-label="Current level">
+    <h1 class="level-title">
+      Stage #<span id="level-number">1</span>
+      <br>
+      <span id="stage-timer">00:00</span>
+    </h1>
+    
+    <p class="level-goal">調整相片直至相似度達 95%</p>
+  </section>
+  <div id="fallback" hidden>Image unavailable. Check your internet connection and reload.</div>
+  <button type="button" id="allow-joystick" hidden>Allow joystick</button>
+  <p id="joystick-status" role="status" hidden></p>
+  <script src="joystick.js"></script>
+  <script>
+    const images = [
+      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4015571178714403489.webp', caption: 'School volleyball · CreativeHK' },
+      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4010448831913228017.webp', caption: 'Beach volleyball · CreativeHK' },
+      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4013348841663313305.jpg', caption: 'Art exhibition · CreativeHK' },
+      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4013505767495918965.webp', caption: 'School basketball · CreativeHK' },
+      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4012019490690778221.webp', caption: 'Creative film visit · CreativeHK' },
+      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4011773240712339459.webp', caption: 'Dunhuang study tour · CreativeHK' },
+      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4011284848949975254.webp', caption: 'Outdoor volleyball · CreativeHK' },
+      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4009203920534737778.webp', caption: 'Island field trip · CreativeHK' },
+      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4009116567384301493.webp', caption: 'Climbing activity · CreativeHK' },
+      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4009042070345970752.webp', caption: 'Beach cleanup · CreativeHK' },
+      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4008907981415591392.webp', caption: 'School excursion · CreativeHK' },
+      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4006114497890051393.webp', caption: 'Dunhuang field trip · CreativeHK' },
+      { src: 'https://a.storyblok.com/f/246847/1334x1334/6e0617894a/dsc00535.webp', caption: 'Hands-on design workshop · CreativeHK' },
+      { src: 'https://a.storyblok.com/f/246847/2102x1402/1622733f17/dsc02505_-1.webp', caption: 'Gallery movement workshop · CreativeHK' },
+      { src: 'https://a.storyblok.com/f/246847/3976x2652/121f8009e4/dsc09106-1.webp', caption: 'Studio critique · CreativeHK' }
+    ];
+    for (let i = images.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [images[i], images[j]] = [images[j], images[i]];
+    }
+
+    const CENTER = 5;
+    const steps = { hue: 5, saturation: 0.1, lightness: 0.05 };
+    const bounds = { hue: [-180, 180], saturation: [0.4, 2], lightness: [0.55, 1.45] };
+    const groupOf = { left: 'move', right: 'move', A: 'hue', X: 'hue', B: 'sat', Y: 'sat', C: 'light', Z: 'light' };
+    const channelOf = { A: 'hue', X: 'hue', B: 'saturation', Y: 'saturation', C: 'lightness', Z: 'lightness' };
+    const signOf = { A: 1, X: -1, B: 1, Y: -1, C: 1, Z: -1 };
+    const board = document.querySelector('#board');
+    const stageLabel = document.querySelector('#stage-label');
+    const levelNumber = document.querySelector('#level-number');
+    const stageTimer = document.querySelector('#stage-timer');
+    const nodes = [];
+    for (let i = 0; i < 11; i += 1) {
+      const strip = document.createElement('div');
+      strip.className = 'strip';
+      const img = document.createElement('img');
+      img.alt = '';
+      img.decoding = 'async';
+      img.style.setProperty('--i', String(i));
+      const mark = document.createElement('span');
+      mark.className = 'mark';
+      mark.hidden = true;
+      strip.append(img, mark);
+      board.append(strip);
+      nodes.push({ img, mark });
+    }
+    const box1 = document.createElement('div');
+    const box2 = document.createElement('div');
+    box1.className = 'box p1';
+    box2.className = 'box p2';
+    box1.textContent = '🐭';
+    box2.textContent = '🐹';
+    board.append(box1, box2);
+
+    let stage = 1;
+    let mix = { move: 1, hue: 1, sat: 1, light: 1 };
+    let at = [0, 5, 5];
+    let round = 0;
+    let strips = [];
+    let winTimer = 0;
+    let timerInterval = 0;
+    let stageStart = 0;
+
+    const randomStep = (min, max, step) => Number((min + Math.floor(Math.random() * ((max - min) / step + 1)) * step).toFixed(2));
+
+    function scoreOf(color) {
+      const hueError = Math.abs(color.hue);
+      const saturationError = Math.abs(color.saturation - 1);
+      const lightnessError = Math.abs(color.lightness - 1);
+      return Math.max(0, Math.round(100 * (1 - 0.4 * hueError / 180 - 0.3 * saturationError / 1.6 - 0.3 * lightnessError / 0.9)));
+    }
+
+    function randomColor() {
+      let color;
+      do {
+        color = {
+          hue: randomStep(30, 120, 5) * (Math.random() < 0.5 ? -1 : 1),
+          saturation: randomStep(0.4, 1.8, 0.1),
+          lightness: randomStep(0.65, 1.4, 0.05)
+        };
+      } while (scoreOf(color) >= 90);
+      return color;
+    }
+
+    function mixGroups() {
+      const keys = ['move', 'hue', 'sat', 'light'];
+      let next;
+      do {
+        next = {};
+        for (const key of keys) next[key] = Math.random() < 0.5 ? 1 : 2;
+      } while (keys.every(key => next[key] === 1) || keys.every(key => next[key] === 2));
+      return next;
+    }
+
+    function playerOwns(player, action, stageNow, mixNow) {
+      if (stageNow === 1) return true;
+      return mixNow[groupOf[action]] === player;
+    }
+
+    function stepTo(index, dir, blocked) {
+      let i = index;
+      while (true) {
+        i += dir;
+        if (i < 0 || i >= 11) return index;
+        if (i !== CENTER && !blocked(i)) return i;
+      }
+    }
+
+    function placeBoxes() {
+      box1.style.left = `${at[1] * 100 / 11}%`;
+      box2.style.left = `${at[2] * 100 / 11}%`;
+      const share = at[1] === at[2];
+      box1.style.transform = share ? 'translateX(-22%)' : '';
+      box2.style.transform = share ? 'translateX(22%)' : '';
+      box1.textContent = `🐭${onMatch(1)}`;
+      box2.textContent = `🐹${onMatch(2)}`;
+      strips.forEach((strip, i) => {
+        const centerLeft = i === CENTER && at[1] !== CENTER && at[2] !== CENTER;
+        const show = centerLeft || (i !== CENTER && strip.locked && i !== at[1] && i !== at[2]);
+        nodes[i].mark.hidden = !show;
+        nodes[i].mark.textContent = show ? '🧀' : '';
+      });
+    }
+
+    function onMatch(player) {
+      const index = at[player];
+      return index !== CENTER && strips[index] && strips[index].locked ? '🧀' : '';
+    }
+
+    function render() {
+      strips.forEach((strip, i) => {
+        const node = nodes[i];
+        node.img.style.filter = strip.center ? '' : `hue-rotate(${strip.hue}deg) saturate(${strip.saturation}) brightness(${strip.lightness})`;
+      });
+      placeBoxes();
+      levelNumber.textContent = String(round + 1);
+    }
+
+    function startTimer() {
+      if (timerInterval) clearInterval(timerInterval);
+      stageStart = Date.now();
+      stageTimer.textContent = '00:00';
+      timerInterval = setInterval(() => {
+        const seconds = Math.max(0, Math.floor((Date.now() - stageStart) / 1000));
+        stageTimer.textContent = `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+      }, 250);
+    }
+
+    function deal(image) {
+      at[1] = CENTER;
+      at[2] = CENTER;
+      strips = Array.from({ length: 11 }, (_, i) => (i === CENTER ? { center: true, locked: true } : { ...randomColor(), locked: false }));
+      for (const node of nodes) {
+        node.img.src = image.src;
+        node.img.alt = image.caption;
+      }
+      render();
+      startTimer();
+    }
+
+    function nextRound() {
+      winTimer = 0;
+      stage = 2;
+      mix = mixGroups();
+      round += 1;
+      deal(images[round % images.length]);
+    }
+
+    function movePlayer(player, dir) {
+      if (!playerOwns(player, dir < 0 ? 'left' : 'right', stage, mix)) return;
+      const other = at[player === 1 ? 2 : 1];
+      const next = stepTo(at[player], dir, i => strips[i].locked || i === other);
+      if (next === at[player]) return;
+      at[player] = next;
+      placeBoxes();
+    }
+
+    function tune(player, action) {
+      if (!playerOwns(player, action, stage, mix)) return;
+      const index = at[player];
+      const strip = strips[index];
+      if (!strip || index === CENTER || strip.locked) return;
+      const channel = channelOf[action];
+      const [min, max] = bounds[channel];
+      const precision = channel === 'saturation' ? 1 : channel === 'lightness' ? 2 : 0;
+      strip[channel] = Number(Math.max(min, Math.min(max, strip[channel] + signOf[action] * steps[channel])).toFixed(precision));
+      if (scoreOf(strip) >= 95) {
+        strip.locked = true;
+        if (strips.every((item, i) => i === CENTER || item.locked) && !winTimer) winTimer = setTimeout(nextRound, 700);
+      }
+      render();
+    }
+
+    const tuneAt = {};
+
+    function onNamed(name, repeat) {
+      const match = /^P([12]) (Left|Right|A|B|C|X|Y|Z)$/.exec(name);
+      if (!match) return;
+      const player = Number(match[1]);
+      const action = match[2] === 'Left' ? 'left' : match[2] === 'Right' ? 'right' : match[2];
+      if (action === 'left' || action === 'right') {
+        if (!repeat) movePlayer(player, action === 'left' ? -1 : 1);
+        return;
+      }
+      const now = Date.now();
+      if (repeat && now - (tuneAt[name] || 0) < 70) return;
+      tuneAt[name] = now;
+      tune(player, action);
+    }
+
+    const keyboard = {
+      ArrowLeft: 'P1 Left', ArrowRight: 'P1 Right',
+      o: 'P1 A', O: 'P1 A', p: 'P1 B', P: 'P1 B', '[': 'P1 C', '{': 'P1 C',
+      l: 'P1 X', L: 'P1 X', ';': 'P1 Y', ':': 'P1 Y', "'": 'P1 Z', '"': 'P1 Z',
+      a: 'P2 Left', A: 'P2 Left', d: 'P2 Right', D: 'P2 Right',
+      r: 'P2 A', R: 'P2 A', t: 'P2 B', T: 'P2 B', y: 'P2 C', Y: 'P2 C',
+      f: 'P2 X', F: 'P2 X', g: 'P2 Y', G: 'P2 Y', h: 'P2 Z', H: 'P2 Z'
+    };
+
+    nodes.forEach(node => {
+      node.img.addEventListener('error', () => { document.querySelector('#fallback').hidden = false; });
+    });
+
+    deal(images[0]);
+
+    const joystickNote = document.querySelector('#joystick-status');
+    const allowJoystick = document.querySelector('#allow-joystick');
+    const serialState = { buffer: '', held: '' };
+    const joy = createJoystick({
+      onText(chunk) {
+        for (const event of readJoystickLines(serialState, chunk)) {
+          if (event.up || !event.pin) continue;
+          const name = pinMap[event.pin];
+          if (name) onNamed(name, event.repeat);
+        }
+      },
+      onStatus(kind, message) {
+        const connected = kind === 'connected';
+        joystickNote.hidden = allowJoystick.hidden = connected;
+        joystickNote.textContent = message || {
+          'needs-permission': 'Click Allow joystick once. After that it connects on its own.',
+          disconnected: 'Joystick disconnected.',
+          error: 'Joystick error.'
+        }[kind] || '';
+      }
+    });
+    allowJoystick.addEventListener('click', () => { joy.requestPort(); });
+    window.addEventListener('keydown', event => {
+      if (event.altKey || event.ctrlKey || event.metaKey) return;
+      if (event.key === 'c' || event.key === 'C') {
+        event.preventDefault();
+        joy.disconnect().finally(() => { location.href = 'console.html?map=1&back=v2'; });
+        return;
+      }
+      const name = keyboard[event.key];
+      if (!name) return;
+      event.preventDefault();
+      onNamed(name);
+    });
+    joy.autoConnect();
+  </script>
+</body>
+</html>
