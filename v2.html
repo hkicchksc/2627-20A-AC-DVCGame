@@ -148,7 +148,6 @@
     const CENTER = 5;
     const steps = { hue: 5, saturation: 0.1, lightness: 0.05 };
     const bounds = { hue: [-180, 180], saturation: [0.4, 2], lightness: [0.55, 1.45] };
-    const groupOf = { left: 'move', right: 'move', A: 'hue', X: 'hue', B: 'sat', Y: 'sat', C: 'light', Z: 'light' };
     const channelOf = { A: 'hue', X: 'hue', B: 'saturation', Y: 'saturation', C: 'lightness', Z: 'lightness' };
     const signOf = { A: 1, X: -1, B: 1, Y: -1, C: 1, Z: -1 };
     const board = document.querySelector('#board');
@@ -179,7 +178,7 @@
     board.append(box1, box2);
 
     let stage = 1;
-    let mix = { move: 1, hue: 1, sat: 1, light: 1 };
+    let mix = { 1: 1, 2: 2 };
     let at = [0, 5, 5];
     let round = 0;
     let strips = [];
@@ -209,18 +208,7 @@
     }
 
     function mixGroups() {
-      const keys = ['move', 'hue', 'sat', 'light'];
-      let next;
-      do {
-        next = {};
-        for (const key of keys) next[key] = Math.random() < 0.5 ? 1 : 2;
-      } while (keys.every(key => next[key] === 1) || keys.every(key => next[key] === 2));
-      return next;
-    }
-
-    function playerOwns(player, action, stageNow, mixNow) {
-      if (stageNow === 1) return true;
-      return mixNow[groupOf[action]] === player;
+      return { 1: 2, 2: 1 };
     }
 
     function stepTo(index, dir, blocked) {
@@ -293,16 +281,15 @@
     }
 
     function movePlayer(player, dir) {
-      if (!playerOwns(player, dir < 0 ? 'left' : 'right', stage, mix)) return;
-      const other = at[player === 1 ? 2 : 1];
-      const next = stepTo(at[player], dir, i => strips[i].locked || i === other);
-      if (next === at[player]) return;
-      at[player] = next;
+      const who = stage === 2 ? mix[player] : player;
+      const other = at[who === 1 ? 2 : 1];
+      const next = stepTo(at[who], dir, i => strips[i].locked || i === other);
+      if (next === at[who]) return;
+      at[who] = next;
       placeBoxes();
     }
 
     function tune(player, action) {
-      if (!playerOwns(player, action, stage, mix)) return;
       const index = at[player];
       const strip = strips[index];
       if (!strip || index === CENTER || strip.locked) return;
