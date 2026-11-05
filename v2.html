@@ -104,7 +104,7 @@
       cursor: pointer;
     }
     #joystick-status { position: fixed; z-index: 7; top: 64px; left: 18px; max-width: 260px; margin: 0; font-size: 12px; }
-    #allow-joystick[hidden], #joystick-status[hidden], #config[hidden] { display: none; }
+    #allow-joystick[hidden], #joystick-status[hidden], #config[hidden], #welcome[hidden] { display: none; }
     #config {
       position: fixed;
       z-index: 8;
@@ -135,6 +135,50 @@
       cursor: pointer;
     }
     #pad button.on { border-color: #d1fb73; color: #d1fb73; }
+    #welcome {
+      position: fixed;
+      z-index: 9;
+      inset: 0;
+      display: grid;
+      align-content: center;
+      justify-items: center;
+      gap: 16px;
+      padding: 24px;
+      overflow: auto;
+      background: #171816;
+    }
+    #welcome h1 { margin: 0; font-size: clamp(32px, 5vw, 52px); }
+    #welcome p { margin: 0; max-width: 640px; color: #aaa99f; text-align: center; }
+    .decks { display: flex; flex-wrap: wrap; gap: 36px; justify-content: center; flex-direction: row-reverse;}
+    .deck { text-align: center; }
+    .deck h2 { margin: 0 0 10px; font-size: 28px; }
+    .layout { display: flex; align-items: flex-end; gap: 14px; }
+    .stick, .face span {
+      display: grid;
+      align-content: center;
+      justify-items: center;
+      border-radius: 50%;
+      line-height: 1;
+    }
+    .stick { width: 72px; height: 72px; }
+    .face { display: grid; grid-template-columns: repeat(3, 58px); gap: 8px; }
+    .face span { width: 58px; height: 58px; color: white; }
+    .face b, .stick b { font-size: 18px; }
+    .face small, .stick small { font-size: 11px; }
+    .blue .stick { background: #8fd4ff; color: #102033; }
+    .blue .face span { background: #1d4ed8; }
+    .red .stick { background: #ff5a5a; color: #2a0707; }
+    .red .face span { background: #dc2626; }
+    #start {
+      padding: 10px 22px;
+      border: 1px solid rgba(255, 255, 255, .2);
+      border-radius: 8px;
+      background: #20211e;
+      color: inherit;
+      font: inherit;
+      font-size: 16px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -155,6 +199,37 @@
       <div id="pad"></div>
       <button type="button" id="skip-map">Skip</button>
     </div>
+  </div>
+  <div id="welcome">
+    <h1>Ways of Tuning</h1>
+    <div class="decks">
+      <section class="deck">
+        <h2>🐭</h2>
+        <div class="layout blue">
+          <div class="stick"><b>← →</b><small>arrows</small></div>
+          <div class="face">
+            <span><b>O</b><small>H+</small></span><span><b>P</b><small>S+</small></span><span><b>[</b><small>L+</small></span>
+            <span><b>L</b><small>H−</small></span><span><b>;</b><small>S−</small></span><span><b>'</b><small>L−</small></span>
+          </div>
+        </div>
+      </section>
+      <section class="deck">
+        <h2>🐹</h2>
+        <div class="layout red">
+          <div class="stick"><b>A D</b><small>left right</small></div>
+          <div class="face">
+            <span><b>R</b><small>H+</small></span><span><b>T</b><small>S+</small></span><span><b>Y</b><small>L+</small></span>
+            <span><b>F</b><small>H−</small></span><span><b>G</b><small>S−</small></span><span><b>H</b><small>L−</small></span>
+          </div>
+        </div>
+      </section>
+    </div>
+    <p>
+      <b>H</b> = hue, <b>S</b> = saturation, <b>L</b> = lightness<br> 
+      <b>Upper row</b> tunes up +<br>
+      <b>Bottom row</b> tunes down -<br>
+    </p>
+    <button type="button" id="start">Click Space to Start</button>
   </div>
   <button type="button" id="allow-joystick" hidden>Allow joystick</button>
   <p id="joystick-status" role="status" hidden></p>
@@ -370,8 +445,6 @@
       node.img.addEventListener('error', () => { document.querySelector('#fallback').hidden = false; });
     });
 
-    deal(images[0]);
-
     const joystickNote = document.querySelector('#joystick-status');
     const allowJoystick = document.querySelector('#allow-joystick');
     const serialState = { buffer: '', held: '' };
@@ -379,6 +452,10 @@
       onText(chunk) {
         for (const event of readJoystickLines(serialState, chunk)) {
           if (event.up || !event.pin) continue;
+          if (!welcome.hidden) {
+            if (!event.repeat) begin();
+            continue;
+          }
           if (!config.hidden) {
             if (!event.repeat && mapAt >= 0 && mapAt < joystickControls.length) {
               assignJoystickPin(event.pin, joystickControls[mapAt][0]);
@@ -403,7 +480,16 @@
     });
     allowJoystick.addEventListener('click', () => { joy.requestPort(); });
 
+    const welcome = document.querySelector('#welcome');
     const config = document.querySelector('#config');
+    let started = false;
+    function begin() {
+      if (started) return;
+      started = true;
+      welcome.hidden = true;
+      deal(images[0]);
+    }
+    document.querySelector('#start').addEventListener('click', begin);
     const mapPromptEl = document.querySelector('#map-prompt');
     const pad = document.querySelector('#pad');
     const chips = {};
@@ -441,6 +527,13 @@
 
     window.addEventListener('keydown', event => {
       if (event.altKey || event.ctrlKey || event.metaKey) return;
+      if (!welcome.hidden) {
+        if (event.key === ' ' && !event.repeat) {
+          event.preventDefault();
+          begin();
+        }
+        return;
+      }
       if (event.key === 'c' || event.key === 'C') {
         event.preventDefault();
         config.hidden = !config.hidden;
