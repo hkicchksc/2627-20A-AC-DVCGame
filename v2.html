@@ -104,7 +104,37 @@
       cursor: pointer;
     }
     #joystick-status { position: fixed; z-index: 7; top: 64px; left: 18px; max-width: 260px; margin: 0; font-size: 12px; }
-    #allow-joystick[hidden], #joystick-status[hidden] { display: none; }
+    #allow-joystick[hidden], #joystick-status[hidden], #config[hidden] { display: none; }
+    #config {
+      position: fixed;
+      z-index: 8;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: rgba(20, 21, 19, .72);
+    }
+    #config .card {
+      width: min(640px, 100%);
+      max-height: calc(100vh - 48px);
+      overflow: auto;
+      padding: 16px;
+      border: 1px solid rgba(255, 255, 255, .2);
+      border-radius: 10px;
+      background: rgba(23, 24, 22, .94);
+    }
+    #map-prompt { margin: 0 0 12px; }
+    #pad { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+    #pad button, #skip-map {
+      min-width: 4.2rem;
+      padding: 8px 10px;
+      border: 1px solid #44453f;
+      border-radius: 8px;
+      background: #20211e;
+      color: inherit;
+      cursor: pointer;
+    }
+    #pad button.on { border-color: #d1fb73; color: #d1fb73; }
   </style>
 </head>
 <body>
@@ -119,6 +149,13 @@
     <p class="level-goal">調整相片直至相似度達 95%</p>
   </section>
   <div id="fallback" hidden>Image unavailable. Check your internet connection and reload.</div>
+  <div id="config" hidden>
+    <div class="card">
+      <p id="map-prompt">C closes.</p>
+      <div id="pad"></div>
+      <button type="button" id="skip-map">Skip</button>
+    </div>
+  </div>
   <button type="button" id="allow-joystick" hidden>Allow joystick</button>
   <p id="joystick-status" role="status" hidden></p>
   <script src="joystick.js"></script>
@@ -151,7 +188,6 @@
     const channelOf = { A: 'hue', X: 'hue', B: 'saturation', Y: 'saturation', C: 'lightness', Z: 'lightness' };
     const signOf = { A: 1, X: -1, B: 1, Y: -1, C: 1, Z: -1 };
     const board = document.querySelector('#board');
-    const stageLabel = document.querySelector('#stage-label');
     const levelNumber = document.querySelector('#level-number');
     const stageTimer = document.querySelector('#stage-timer');
     const nodes = [];
@@ -343,6 +379,14 @@
       onText(chunk) {
         for (const event of readJoystickLines(serialState, chunk)) {
           if (event.up || !event.pin) continue;
+          if (!config.hidden) {
+            if (!event.repeat && mapAt >= 0 && mapAt < joystickControls.length) {
+              assignJoystickPin(event.pin, joystickControls[mapAt][0]);
+              mapAt += 1;
+              mapPrompt();
+            }
+            continue;
+          }
           const name = pinMap[event.pin];
           if (name) onNamed(name, event.repeat);
         }
@@ -358,11 +402,56 @@
       }
     });
     allowJoystick.addEventListener('click', () => { joy.requestPort(); });
+
+    const config = document.querySelector('#config');
+    const mapPromptEl = document.querySelector('#map-prompt');
+    const pad = document.querySelector('#pad');
+    const chips = {};
+    let mapAt = -1;
+    joystickControls.forEach(([name], index) => {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.addEventListener('click', () => { mapAt = index; mapPrompt(); });
+      pad.append(chip);
+      chips[name] = chip;
+    });
+    function refreshChips() {
+      for (const [name] of joystickControls) {
+        const pin = Object.keys(pinMap).find(key => pinMap[key] === name);
+        chips[name].textContent = pin ? `${name} ${pin}` : name;
+      }
+    }
+    function mapPrompt() {
+      for (const chip of Object.values(chips)) chip.classList.remove('on');
+      if (config.hidden || mapAt < 0 || mapAt >= joystickControls.length) {
+        mapPromptEl.textContent = mapAt >= joystickControls.length ? 'Mapping done. C closes.' : 'C closes.';
+        if (mapAt >= joystickControls.length) mapAt = -1;
+        refreshChips();
+        return;
+      }
+      mapPromptEl.textContent = `Press ${joystickControls[mapAt][0]}. ${mapAt + 1} of ${joystickControls.length}. C closes.`;
+      chips[joystickControls[mapAt][0]].classList.add('on');
+      refreshChips();
+    }
+    document.querySelector('#skip-map').addEventListener('click', () => {
+      if (mapAt < 0) return;
+      mapAt += 1;
+      mapPrompt();
+    });
+
     window.addEventListener('keydown', event => {
       if (event.altKey || event.ctrlKey || event.metaKey) return;
       if (event.key === 'c' || event.key === 'C') {
         event.preventDefault();
-        joy.disconnect().finally(() => { location.href = 'console.html?map=1&back=v2'; });
+        config.hidden = !config.hidden;
+        mapAt = config.hidden ? -1 : 0;
+        mapPrompt();
+        return;
+      }
+      if (!config.hidden) return;
+      if (event.key === ' ' && !event.repeat) {
+        event.preventDefault();
+        nextRound();
         return;
       }
       const name = keyboard[event.key];
