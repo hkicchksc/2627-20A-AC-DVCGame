@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#171816">
+  <title>Ways of Tuning — Backstage</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+      background: #171816;
+      color: #f2f0e9;
+      --muted: #aaa99f;
+      --line: #44453f;
+      --acid: #d1fb73;
+      --panel: #20211e;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: #171816; }
+    main { width: min(760px, calc(100% - 32px)); margin: 0 auto; padding: 28px 0 40px; display: grid; gap: 14px; }
+    h1 { margin: 0; font-size: 32px; letter-spacing: -0.03em; }
+    h2 { margin: 0 0 10px; font-size: 16px; }
+    p { margin: 8px 0 0; color: var(--muted); }
+    .eyebrow { margin: 0; color: var(--acid); font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; }
+    section { padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+    .pill { display: inline-flex; align-items: center; margin-top: 12px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font-size: 13px; }
+    .pill[data-on="true"] { color: #171816; background: var(--acid); border-color: var(--acid); }
+    dl { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin: 0; }
+    dt { color: var(--muted); font-size: 12px; }
+    dd { margin: 4px 0 0; font-size: 22px; font-variant-numeric: tabular-nums; }
+    .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    button, a.button {
+      display: inline-block;
+      padding: 10px 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #171816;
+      color: inherit;
+      font: inherit;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    button.primary, a.primary { background: var(--acid); color: #171816; border-color: var(--acid); font-weight: 700; }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+    .note { min-height: 1.4em; }
+    @media (max-width: 700px) {
+      dl { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <p class="eyebrow">Backstage</p>
+      <h1>Ways of Tuning</h1>
+      <p>These controls run on the game view. Put that window on the display. Another computer opens Backstage at this computer's address. Joysticks stay on the game view: press C there to map them.</p>
+      <p id="remote-line"></p>
+      <span id="link-game" class="pill" data-on="false">Game view offline</span>
+    </header>
+
+    <section>
+      <h2>Now</h2>
+      <dl>
+        <div><dt>Round</dt><dd id="now-round">—</dd></div>
+        <div><dt>Timer</dt><dd id="now-timer">—</dd></div>
+        <div><dt>Matched</dt><dd id="now-matched">—</dd></div>
+        <div><dt>Mouse</dt><dd id="now-p1">—</dd></div>
+        <div><dt>Hamster</dt><dd id="now-p2">—</dd></div>
+      </dl>
+      <p id="now-note" class="note"></p>
+    </section>
+
+    <section>
+      <h2>Run</h2>
+      <div class="actions">
+        <button id="btn-start" type="button" class="primary">Start</button>
+        <button id="btn-next" type="button">Next round</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>Windows</h2>
+      <div class="actions">
+        <a class="button primary" href="/" target="_blank" rel="noopener">Open game view</a>
+        <a class="button" href="console.html" target="_blank" rel="noopener">Serial tester</a>
+      </div>
+    </section>
+  </main>
+  <script src="remote.js"></script>
+  <script src="backstage.js"></script>
+</body>
+</html>

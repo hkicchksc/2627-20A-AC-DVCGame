@@ -234,6 +234,8 @@
   <button type="button" id="allow-joystick" hidden>Allow joystick</button>
   <p id="joystick-status" role="status" hidden></p>
   <script src="joystick.js"></script>
+  <script src="central-client.js"></script>
+  <script src="remote.js"></script>
   <script>
     const images = [
       { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4015571178714403489.webp', caption: 'School volleyball · CreativeHK' },
@@ -359,6 +361,7 @@
       });
       placeBoxes();
       levelNumber.textContent = String(round + 1);
+      centralStatus();
     }
 
     function startTimer() {
@@ -410,7 +413,18 @@
       strip[channel] = Number(Math.max(min, Math.min(max, strip[channel] + signOf[action] * steps[channel])).toFixed(precision));
       if (scoreOf(strip) >= 95) {
         strip.locked = true;
-        if (strips.every((item, i) => i === CENTER || item.locked) && !winTimer) winTimer = setTimeout(nextRound, 700);
+        if (strips.every((item, i) => i === CENTER || item.locked) && !winTimer) {
+          winTimer = setTimeout(nextRound, 700);
+          centralSend({
+            type: 'signal',
+            reason: 'round',
+            phase: 'clear',
+            score: round + 1,
+            update: `Round ${round + 1} cleared`,
+            summary: `Round ${round + 1} cleared`,
+            detail: { round: round + 1 }
+          });
+        }
       }
       render();
     }
@@ -552,6 +566,64 @@
       event.preventDefault();
       onNamed(name);
     });
+    const central = createCentralClient('dvc');
+    const stageBus = createRemoteBus('game');
+    function publishStage() {
+      const total = strips.length ? strips.length - 1 : 0;
+      const locked = strips.filter((item, index) => index !== CENTER && item.locked).length;
+      stageBus.postMessage({
+        from: 'game',
+        type: 'state',
+        started,
+        phase: started ? 'live' : 'idle',
+        round: started ? round + 1 : 0,
+        matched: locked,
+        total,
+        timer: stageTimer.textContent,
+        p1: playerMatch(1),
+        p2: playerMatch(2)
+      });
+    }
+    stageBus.onmessage = (event) => {
+        const msg = event.data;
+        if (!msg || msg.from !== 'backstage' || msg.type !== 'command') return;
+        if (msg.action === 'start') begin();
+        else if (msg.action === 'next' && started) nextRound();
+        publishStage();
+      };
+    function centralSend(message) {
+      if (message.type === 'signal') central.signal(message);
+      else central.status(message);
+    }
+    function playerMatch(player) {
+      const index = at[player];
+      const strip = strips[index];
+      if (!started || !strip || strip.center) return '—';
+      return scoreOf(strip);
+    }
+    function centralStatus() {
+      const total = strips.length ? strips.length - 1 : 0;
+      const locked = strips.filter((item, index) => index !== CENTER && item.locked).length;
+      const update = started ? `Round ${round + 1} · matched ${locked}/${total} · ${stageTimer.textContent}` : 'Waiting to start';
+      const message = {
+        type: 'status',
+        phase: started ? 'live' : 'idle',
+        score: round,
+        update,
+        summary: update,
+        detail: {
+          round: started ? round + 1 : 0,
+          matched: `${locked}/${total}`,
+          timer: stageTimer.textContent,
+          p1: playerMatch(1),
+          p2: playerMatch(2)
+        }
+      };
+      central.status(message);
+      publishStage();
+    }
+    setInterval(centralStatus, 1000);
+    centralStatus();
     joy.autoConnect();
   </script>
 </body>
