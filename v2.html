@@ -288,6 +288,10 @@
     box2.className = 'box p2';
     box1.textContent = '🐭';
     box2.textContent = '🐹';
+    box1.style.filter = 'blur(0.8px)';
+    box2.style.filter = 'blur(0.8px)';
+    box1.style.textShadow = "1px 1px 10px #c6bed3, 0 0 1em #c6bed3, 0 0 0.2em #c6bed3";
+    box2.style.textShadow = "1px 1px 10px #fdb183, 0 0 1em #fdb183, 0 0 0.2em #fdb183";
     board.append(box1, box2);
 
     let stage = 1;
@@ -346,6 +350,8 @@
         const show = centerLeft || (i !== CENTER && strip.locked && i !== at[1] && i !== at[2]);
         nodes[i].mark.hidden = !show;
         nodes[i].mark.textContent = show ? '🧀' : '';
+        nodes[i].mark.style.filter = show ? 'blur(0.8px)' : '';
+        nodes[i].mark.style.textShadow = show ? '1px 1px 10px #ffe344, 0 0 1em #ffe344, 0 0 0.2em #ffe344' : '';
       });
     }
 
