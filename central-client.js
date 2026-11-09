@@ -1,6 +1,6 @@
 // WebSocket client for the Central server at ws://localhost:8787.
 // This page connects out. Central does not connect in.
-function createCentralClient(station) {
+function createCentralClient(station, options = {}) {
   const fromQuery = new URLSearchParams(location.search).get("central");
   const host = location.hostname;
   const url = fromQuery
@@ -37,6 +37,16 @@ function createCentralClient(station) {
       setTimeout(connect, 1500);
     });
     socket.addEventListener("error", () => {});
+    socket.addEventListener("message", (event) => {
+      let message;
+      try {
+        message = JSON.parse(event.data);
+      } catch {
+        return;
+      }
+      if (message?.type === "restartAll") options.onRestart?.();
+      if (message?.type === "session") options.onSession?.(message);
+    });
   }
 
   function asScore(value) {

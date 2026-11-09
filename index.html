@@ -129,7 +129,12 @@
     const originalImage = document.querySelector('#original-image');
     const tunedImage = document.querySelector('#tuned-image');
     const message = document.querySelector('#message');
-    const central = createCentralClient("dvc");
+    const central = createCentralClient("dvc", {
+      onRestart() {
+        roundsCleared = 0;
+        startRound(0);
+      },
+    });
     let roundsCleared = 0;
     let round = 0;
     let selected = 0;
