@@ -2,7 +2,10 @@ import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { createOsc, handleOsc } from "./osc.mjs";
 import { attachRemoteRelay, lanAddresses } from "./remote-relay.mjs";
+
+const osc = createOsc("dvc");
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const rootWithSep = root.endsWith(path.sep) ? root : root + path.sep;
@@ -23,9 +26,10 @@ const types = {
   ".wasm": "application/wasm",
 };
 
-const server = http.createServer((req, res) => {
+const server = http.createServer(async (req, res) => {
   const url = new URL(req.url || "/", `http://127.0.0.1:${port}`);
   let pathname = decodeURIComponent(url.pathname);
+  if (await handleOsc(req, res, pathname, osc)) return;
   if (pathname === "/backstage/") {
     res.writeHead(308, { Location: "/backstage" });
     res.end();
@@ -58,6 +62,9 @@ const server = http.createServer((req, res) => {
 });
 
 const takeRemote = attachRemoteRelay();
+osc.listen((value) => {
+  takeRemote.broadcast(JSON.stringify({ type: "black", value }));
+});
 server.on("upgrade", (req, socket) => {
   if (!takeRemote(req, socket)) socket.destroy();
 });
@@ -71,6 +78,7 @@ server.on("error", (error) => {
 server.listen(port, "0.0.0.0", () => {
   console.log(`Ways of Tuning game view at http://127.0.0.1:${port}/`);
   console.log(`Backstage at http://127.0.0.1:${port}/backstage`);
+  console.log(`OSC ${osc.where()} · /dvc`);
   for (const address of lanAddresses()) {
     console.log(`Other computers: http://${address}:${port}/backstage`);
   }

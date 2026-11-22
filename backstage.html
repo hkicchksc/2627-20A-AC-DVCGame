@@ -44,6 +44,18 @@
     button.primary, a.primary { background: var(--acid); color: #171816; border-color: var(--acid); font-weight: 700; }
     button:disabled { opacity: 0.45; cursor: not-allowed; }
     .note { min-height: 1.4em; }
+    form.osc { display: grid; gap: 10px; margin-top: 4px; }
+    label { display: grid; gap: 4px; color: var(--muted); font-size: 13px; }
+    input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #171816;
+      color: inherit;
+      font: inherit;
+    }
+    .osc-row { display: grid; grid-template-columns: 1fr 140px; gap: 10px; }
     @media (max-width: 700px) {
       dl { grid-template-columns: 1fr 1fr; }
     }
@@ -77,6 +89,30 @@
         <button id="btn-start" type="button" class="primary">Start</button>
         <button id="btn-next" type="button">Next round</button>
       </div>
+    </section>
+
+    <section>
+      <h2>OSC</h2>
+      <p>Empty host turns OSC off. Port defaults to 8000. Each message is <code>/dvc</code> with a kind, a text, and a number.</p>
+      <form id="osc-form" class="osc">
+        <div class="osc-row">
+          <label>OSC host
+            <input id="osc-host" type="text" spellcheck="false" autocomplete="off" placeholder="empty turns OSC off" />
+          </label>
+          <label>OSC port
+            <input id="osc-port" type="number" min="1" max="65535" step="1" value="8000" />
+          </label>
+        </div>
+        <div class="actions">
+          <button id="btn-osc" type="submit" class="primary">Apply</button>
+        </div>
+      </form>
+      <p id="osc-line" class="note">OSC off</p>
+      <p>This computer also listens. Send <code>/dvc/black</code> to UDP 9030. A number above 0 blacks the game screen and cuts its sound. 0 brings the picture and sound back. <code>/black</code> does the same.</p>
+      <div class="actions">
+        <button id="btn-black" type="button">Black screen</button>
+      </div>
+      <p id="black-line" class="note">Picture on</p>
     </section>
 
     <section>

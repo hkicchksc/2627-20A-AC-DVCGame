@@ -132,7 +132,7 @@ export function attachRemoteRelay() {
     socket.on("error", () => socket.destroy());
   }
 
-  return function takeRemote(req, socket) {
+  function takeRemote(req, socket) {
     const url = new URL(req.url || "/", "http://127.0.0.1");
     if (url.pathname !== "/remote") return false;
     const key = req.headers["sec-websocket-key"];
@@ -142,5 +142,15 @@ export function attachRemoteRelay() {
     }
     shake(socket, key);
     return true;
+  }
+
+  takeRemote.broadcast = function broadcast(payload) {
+    const data = Buffer.isBuffer(payload) ? payload : Buffer.from(String(payload));
+    for (const client of clients) {
+      if (client.destroyed || client.writableLength > 1_000_000) continue;
+      sendFrame(client, 0x1, data);
+    }
   };
+
+  return takeRemote;
 }

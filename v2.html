@@ -180,6 +180,7 @@
       cursor: pointer;
     }
   </style>
+  <script src="blackout.js"></script>
 </head>
 <body>
   <div id="board"></div>
@@ -445,6 +446,7 @@
             summary: `Round ${round + 1} cleared`,
             detail: { round: round + 1 }
           });
+          sendOsc('clear', `Round ${round + 1} cleared`, round + 1);
         }
       }
       render();
@@ -633,6 +635,19 @@
       if (message.type === 'signal') central.signal(message);
       else central.status(message);
     }
+    let oscKey = '';
+    function sendOsc(kind, text, value) {
+      const amount = Number(value);
+      const number = Number.isFinite(amount) ? Math.round(amount * 1000) / 1000 : 0;
+      const key = `${kind}|${text}|${number}`;
+      if (kind !== 'clear' && key === oscKey) return;
+      if (kind !== 'clear') oscKey = key;
+      fetch('/api/osc/event', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind, text, value: number })
+      }).catch(() => {});
+    }
     function playerMatch(player) {
       const index = at[player];
       const strip = strips[index];
@@ -660,6 +675,7 @@
       };
       central.status(message);
       publishStage();
+      sendOsc('state', update, total ? locked / total : 0);
     }
     setInterval(centralStatus, 1000);
     centralStatus();
