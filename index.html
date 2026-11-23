@@ -75,12 +75,12 @@
 <body tabindex="0">
   <main class="stage">
     <section class="canvas" aria-label="Original photo on the left, tuned photo on the right">
-      <img id="original-image" alt="Original CreativeHK photograph" decoding="async">
+      <img id="original-image" alt="Original local photograph" decoding="async">
       <div class="tuned-window"><img id="tuned-image" alt="The same photograph with your hue, saturation, and lightness adjustments" decoding="async"></div>
       <div class="split-guide" aria-hidden="true"><span class="split-handle">↔</span></div>
       <span class="side-tag original-tag">Original</span>
       <span class="side-tag tuned-tag">Tuning</span>
-      <div class="image-fallback" id="image-fallback" role="status" hidden>Image unavailable. Check your internet connection and reload.</div>
+      <div class="image-fallback" id="image-fallback" role="status" hidden>Image unavailable. Check that the local images folder is present and reload.</div>
     </section>
     <p class="level-timer"><span id="stage-timer">00:59</span></p>
     <button type="button" id="allow-joystick" hidden>Allow joystick</button>
@@ -89,7 +89,7 @@
     <section class="level-info" aria-label="Current level">
       <h1 class="level-title">關卡 #<span id="level-number">1</span></h1>
       <p class="level-goal">調整相片直至相似度達 95%</p>
-      <a class="level-source" href="https://www.creativehk.edu.hk/" target="_blank" rel="noopener noreferrer">Image source · CreativeHK</a>
+      <span class="level-source">Local photo collection</span>
     </section>
 
     <section class="tuning float-panel" aria-label="Match rating">
@@ -101,21 +101,38 @@
   <script src="joystick.js"></script>
   <script>
     const images = [
-      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4015571178714403489.webp', caption: 'School volleyball · CreativeHK' },
-      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4010448831913228017.webp', caption: 'Beach volleyball · CreativeHK' },
-      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4013348841663313305.jpg', caption: 'Art exhibition · CreativeHK' },
-      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4013505767495918965.webp', caption: 'School basketball · CreativeHK' },
-      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4012019490690778221.webp', caption: 'Creative film visit · CreativeHK' },
-      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4011773240712339459.webp', caption: 'Dunhuang study tour · CreativeHK' },
-      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4011284848949975254.webp', caption: 'Outdoor volleyball · CreativeHK' },
-      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4009203920534737778.webp', caption: 'Island field trip · CreativeHK' },
-      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4009116567384301493.webp', caption: 'Climbing activity · CreativeHK' },
-      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4009042070345970752.webp', caption: 'Beach cleanup · CreativeHK' },
-      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4008907981415591392.webp', caption: 'School excursion · CreativeHK' },
-      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4006114497890051393.webp', caption: 'Dunhuang field trip · CreativeHK' },
-      { src: 'https://a.storyblok.com/f/246847/1334x1334/6e0617894a/dsc00535.webp', caption: 'Hands-on design workshop · CreativeHK' },
-      { src: 'https://a.storyblok.com/f/246847/2102x1402/1622733f17/dsc02505_-1.webp', caption: 'Gallery movement workshop · CreativeHK' },
-      { src: 'https://a.storyblok.com/f/246847/3976x2652/121f8009e4/dsc09106-1.webp', caption: 'Studio critique · CreativeHK' }
+      { src: './images/DVC001.WEBP', caption: 'Local photo DVC001' },
+      { src: './images/DVC002.WEBP', caption: 'Local photo DVC002' },
+      { src: './images/DVC003.WEBP', caption: 'Local photo DVC003' },
+      { src: './images/DVC004.WEBP', caption: 'Local photo DVC004' },
+      { src: './images/DVC005.WEBP', caption: 'Local photo DVC005' },
+      { src: './images/DVC006.WEBP', caption: 'Local photo DVC006' },
+      { src: './images/DVC007.WEBP', caption: 'Local photo DVC007' },
+      { src: './images/DVC008.WEBP', caption: 'Local photo DVC008' },
+      { src: './images/DVC009.WEBP', caption: 'Local photo DVC009' },
+      { src: './images/DVC010.WEBP', caption: 'Local photo DVC010' },
+      { src: './images/DVC011.WEBP', caption: 'Local photo DVC011' },
+      { src: './images/DVC012.WEBP', caption: 'Local photo DVC012' },
+      { src: './images/DVC013.WEBP', caption: 'Local photo DVC013' },
+      { src: './images/DVC014.WEBP', caption: 'Local photo DVC014' },
+      { src: './images/DVC015.WEBP', caption: 'Local photo DVC015' },
+      { src: './images/DVC016.WEBP', caption: 'Local photo DVC016' },
+      { src: './images/DVC017.WEBP', caption: 'Local photo DVC017' },
+      { src: './images/DVC018.WEBP', caption: 'Local photo DVC018' },
+      { src: './images/DVC019.WEBP', caption: 'Local photo DVC019' },
+      { src: './images/DVC020.WEBP', caption: 'Local photo DVC020' },
+      { src: './images/DVC021.WEBP', caption: 'Local photo DVC021' },
+      { src: './images/DVC022.WEBP', caption: 'Local photo DVC022' },
+      { src: './images/DVC023.WEBP', caption: 'Local photo DVC023' },
+      { src: './images/DVC024.WEBP', caption: 'Local photo DVC024' },
+      { src: './images/DVC025.WEBP', caption: 'Local photo DVC025' },
+      { src: './images/DVC026.WEBP', caption: 'Local photo DVC026' },
+      { src: './images/DVC027.WEBP', caption: 'Local photo DVC027' },
+      { src: './images/DVC028.WEBP', caption: 'Local photo DVC028' },
+      { src: './images/DVC029.WEBP', caption: 'Local photo DVC029' },
+      { src: './images/DVC030.WEBP', caption: 'Local photo DVC030' },
+      { src: './images/DVC031.WEBP', caption: 'Local photo DVC031' },
+      { src: './images/DVC032.WEBP', caption: 'Local photo DVC032' }
     ];
     for (let i = images.length - 1; i > 0; i -= 1) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -289,7 +306,7 @@
     [originalImage, tunedImage].forEach(image => {
       image.addEventListener('error', () => {
         document.querySelector('#image-fallback').hidden = false;
-        setMessage('A CreativeHK image could not load. Check your connection and reload.', 'error');
+        setMessage('A local image could not load. Check the images folder and reload.', 'error');
       });
     });
 
