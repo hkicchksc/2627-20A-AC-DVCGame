@@ -1,4 +1,4 @@
-/** Decode one OSC 1.0 packet and decide the blackout command. */
+/** Decode one OSC 1.0 packet and decide a blackout or run command. */
 
 function readString(buffer, offset, end) {
   if (offset >= end) return null;
@@ -98,4 +98,47 @@ export function blackCommand(station, message) {
     return true;
   }
   return true;
+}
+
+const RUN_ACTIONS = new Set(["start", "reset", "restart"]);
+
+function isPress(args) {
+  if (!args.length) return true;
+  const value = args[0];
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return Number.isFinite(value) && value >= 0.5;
+  if (typeof value === "string") {
+    const text = value.trim().toLowerCase();
+    if (!text || text === "1" || text === "on" || text === "true") return true;
+    if (text === "0" || text === "off" || text === "false") return false;
+    const number = Number(text);
+    if (Number.isFinite(number)) return number >= 0.5;
+    return true;
+  }
+  return false;
+}
+
+function runAction(parts, stationName) {
+  if (parts.length === 1 && RUN_ACTIONS.has(parts[0])) return parts[0];
+  if (parts.length === 2 && parts[0] === "game" && RUN_ACTIONS.has(parts[1])) return parts[1];
+  if (parts.length === 2 && parts[0] === stationName && RUN_ACTIONS.has(parts[1])) return parts[1];
+  return "";
+}
+
+export function controlCommand(station, message) {
+  const address = String(message?.address || "").replace(/\/+$/, "").toLowerCase();
+  const stationName = String(station || "").toLowerCase();
+  const args = Array.isArray(message?.args) ? message.args : [];
+  const parts = address.split("/").filter(Boolean);
+  let action = runAction(parts, stationName);
+  let pressArgs = args;
+  if (!action && parts.length === 1 && parts[0] === stationName) {
+    const word = typeof args[0] === "string" ? args[0].trim().toLowerCase() : "";
+    if (!RUN_ACTIONS.has(word)) return null;
+    action = word;
+    pressArgs = args.slice(1);
+  }
+  if (!action) return null;
+  const latched = pressArgs.length > 0 && (typeof pressArgs[0] === "number" || typeof pressArgs[0] === "boolean");
+  return { action, down: isPress(pressArgs), latched };
 }

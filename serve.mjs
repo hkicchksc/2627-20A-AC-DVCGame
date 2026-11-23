@@ -64,6 +64,8 @@ const server = http.createServer(async (req, res) => {
 const takeRemote = attachRemoteRelay();
 osc.listen((value) => {
   takeRemote.broadcast(JSON.stringify({ type: "black", value }));
+}, (action) => {
+  takeRemote.broadcast(JSON.stringify({ type: "control", action }));
 });
 server.on("upgrade", (req, socket) => {
   if (!takeRemote(req, socket)) socket.destroy();

@@ -679,6 +679,17 @@
     }
     setInterval(centralStatus, 1000);
     centralStatus();
+    window.addEventListener('osc-control', (event) => {
+      if (event.detail === 'reset') restartGame();
+      else if (event.detail === 'restart') {
+        restartGame();
+        begin();
+      } else if (event.detail === 'start') {
+        if (started) restartGame();
+        begin();
+      } else return;
+      centralStatus();
+    });
     joy.autoConnect();
   </script>
 </body>

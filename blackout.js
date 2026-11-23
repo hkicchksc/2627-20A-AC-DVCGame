@@ -144,7 +144,14 @@
     socket.addEventListener("message", (event) => {
       let msg;
       try { msg = JSON.parse(event.data); } catch { return; }
-      if (!msg || msg.type !== "black") return;
+      if (!msg) return;
+      if (msg.type === "control") {
+        if (msg.action === "start" || msg.action === "reset" || msg.action === "restart") {
+          window.dispatchEvent(new CustomEvent("osc-control", { detail: msg.action }));
+        }
+        return;
+      }
+      if (msg.type !== "black") return;
       setBlack(msg.value, true);
     });
     socket.addEventListener("close", () => setTimeout(connect, 1000));

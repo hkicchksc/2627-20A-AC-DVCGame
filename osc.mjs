@@ -1,5 +1,5 @@
 import dgram from "node:dgram";
-import { blackCommand, decodeOscPacket } from "./osc-listen.mjs";
+import { blackCommand, controlCommand, decodeOscPacket } from "./osc-listen.mjs";
 
 function oscPad(buffer) {
   const extra = (4 - (buffer.length % 4)) % 4;
@@ -78,7 +78,10 @@ export function createOsc(station) {
   let black = false;
   let listenError = "";
   let onBlack = () => {};
+  let onControl = () => {};
   let listening = false;
+  const controlGap = new Map();
+  const controlHeld = new Map();
 
   function view() {
     return {
@@ -153,8 +156,26 @@ export function createOsc(station) {
     return transmit(kind, text, number);
   }
 
-  function listen(handler) {
+  function controlEdge(action, down, latched) {
+    if (!latched) {
+      if (!down) return false;
+      const now = Date.now();
+      if (now - (controlGap.get(action) || 0) < 400) return false;
+      controlGap.set(action, now);
+      return true;
+    }
+    const was = controlHeld.get(action) === true;
+    controlHeld.set(action, down);
+    if (!down || was) return false;
+    const now = Date.now();
+    if (now - (controlGap.get(action) || 0) < 400) return false;
+    controlGap.set(action, now);
+    return true;
+  }
+
+  function listen(handler, control) {
     if (typeof handler === "function") onBlack = handler;
+    if (typeof control === "function") onControl = control;
     if (listening) return;
     listening = true;
     const inbound = dgram.createSocket("udp4");
@@ -171,13 +192,16 @@ export function createOsc(station) {
       }
       for (const message of messages) {
         const next = blackCommand(station, message);
-        if (next == null) continue;
-        applyBlack(next);
+        if (next != null) applyBlack(next);
+        const run = controlCommand(station, message);
+        if (!run || !controlEdge(run.action, run.down, run.latched)) continue;
+        console.log(`osc in /${station}/${run.action}`);
+        onControl(run.action);
       }
     });
     inbound.bind(listenPort, "0.0.0.0", () => {
       listenError = "";
-      console.log(`OSC in udp://0.0.0.0:${listenPort} · /${station}/black`);
+      console.log(`OSC in udp://0.0.0.0:${listenPort} · /${station}/black /${station}/start /${station}/reset /${station}/restart`);
     });
   }
 
