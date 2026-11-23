@@ -1,0 +1,9 @@
+{
+  "name": "ways-of-tuning",
+  "private": true,
+  "type": "module",
+  "description": "Ways of Tuning. Match photo strips from a keyboard or the Arduino console.",
+  "scripts": {
+    "start": "node serve.mjs"
+  }
+}

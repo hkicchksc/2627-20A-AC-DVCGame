@@ -102,6 +102,7 @@
   </main>
 
   <script src="joystick.js"></script>
+  <script src="central-client.js"></script>
   <script>
     const images = [
       { src: './images/DVC001.WEBP', caption: 'Local photo DVC001' },
@@ -148,6 +149,13 @@
     const originalImage = document.querySelector('#original-image');
     const tunedImage = document.querySelector('#tuned-image');
     const message = document.querySelector('#message');
+    const central = createCentralClient("dvc", {
+      onRestart() {
+        roundsCleared = 0;
+        startRound(0);
+      },
+    });
+    let roundsCleared = 0;
     let round = 0;
     let selected = 0;
     let split = 50;
@@ -182,6 +190,15 @@
       badge.innerHTML = `${'<img src="./images/cheese.png" alt="">'.repeat(cheeseCount)}${'<img src="./images/mouse.png" alt="">'.repeat(mouseCount)}`;
       badge.setAttribute('aria-label', `${score}% match, ${mouseCount} mice and ${cheeseCount} cheese`);
       document.querySelector('#level-number').textContent = String(round + 1);
+      const timer = document.querySelector('#stage-timer').textContent;
+      const update = `Level ${round + 1} · ${score}% match · ${timer}`;
+      central.status({
+        phase: 'live',
+        score,
+        update,
+        summary: update,
+        detail: { level: round + 1, match: `${score}%`, timer, cleared: roundsCleared }
+      });
     }
 
     function setMessage(text, kind = '') {
@@ -229,7 +246,18 @@
       const { score, matched } = matchState();
       if (matched) {
         setMessage(round === images.length - 1 ? `All ${images.length} images matched · starting a new set…` : 'Match found · loading the next image…', 'success');
-        if (!advanceTimer) advanceTimer = setTimeout(() => startRound(round + 1), 1000);
+        if (!advanceTimer) {
+          roundsCleared += 1;
+          central.signal({
+            reason: 'round',
+            phase: 'clear',
+            score,
+            update: `Level ${round + 1} matched · ${score}%`,
+            summary: `Level ${round + 1} matched · ${score}%`,
+            detail: { level: round + 1, match: `${score}%`, cleared: roundsCleared }
+          });
+          advanceTimer = setTimeout(() => startRound(round + 1), 1000);
+        }
       } else {
         if (advanceTimer) clearTimeout(advanceTimer);
         advanceTimer = 0;
