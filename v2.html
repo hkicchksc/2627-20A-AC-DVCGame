@@ -32,16 +32,27 @@
       bottom: 8px;
       left: 0;
       right: 0;
+      height: 56px;
       font-size: 56px;
       line-height: 1;
       text-align: center;
       pointer-events: none;
     }
+    .mark img {
+      position: absolute;
+      left: 50%;
+      width: 56px;
+      height: 56px;
+      transform: translateX(-50%);
+      object-fit: contain;
+    }
+    .box img, .deck h2 img { width: 1em; height: 1em; object-fit: contain; vertical-align: middle; }
     .box {
       position: absolute;
       z-index: 3;
       bottom: 12px;
       width: calc(100% / 11);
+      transition: bottom 180ms ease;
       pointer-events: none;
       font-size: min(68px, 12vw);
       line-height: 1;
@@ -204,7 +215,7 @@
     <h1>Ways of Tuning</h1>
     <div class="decks">
       <section class="deck">
-        <h2>🐭</h2>
+        <h2><img src="./images/mouse.png" alt="Mouse"></h2>
         <div class="layout blue">
           <div class="stick"><b>← →</b><small>arrows</small></div>
           <div class="face">
@@ -214,7 +225,7 @@
         </div>
       </section>
       <section class="deck">
-        <h2>🐹</h2>
+        <h2><img src="./images/hamster.png" alt="Hamster"></h2>
         <div class="layout red">
           <div class="stick"><b>A D</b><small>left right</small></div>
           <div class="face">
@@ -301,10 +312,8 @@
     const box2 = document.createElement('div');
     box1.className = 'box p1';
     box2.className = 'box p2';
-    box1.textContent = '🐭';
-    box2.textContent = '🐹';
-    box1.style.filter = 'blur(0.8px)';
-    box2.style.filter = 'blur(0.8px)';
+    box1.innerHTML = '<img src="./images/mouse.png" alt="Mouse">';
+    box2.innerHTML = '<img src="./images/hamster.png" alt="Hamster">';
     box1.style.textShadow = "1px 1px 10px #c6bed3, 0 0 1em #c6bed3, 0 0 0.2em #c6bed3";
     box2.style.textShadow = "1px 1px 10px #fdb183, 0 0 1em #fdb183, 0 0 0.2em #fdb183";
     board.append(box1, box2);
@@ -355,24 +364,21 @@
     function placeBoxes() {
       box1.style.left = `${at[1] * 100 / 11}%`;
       box2.style.left = `${at[2] * 100 / 11}%`;
+      box1.style.bottom = at[1] !== CENTER && strips[at[1]] && strips[at[1]].locked ? '76px' : '12px';
+      box2.style.bottom = at[2] !== CENTER && strips[at[2]] && strips[at[2]].locked ? '76px' : '12px';
       const share = at[1] === at[2];
       box1.style.transform = share ? 'translateX(-22%)' : '';
       box2.style.transform = share ? 'translateX(22%)' : '';
-      box1.textContent = `🐭${onMatch(1)}`;
-      box2.textContent = `🐹${onMatch(2)}`;
+      box1.innerHTML = '<img src="./images/mouse.png" alt="Mouse">';
+      box2.innerHTML = '<img src="./images/hamster.png" alt="Hamster">';
       strips.forEach((strip, i) => {
         const centerLeft = i === CENTER && at[1] !== CENTER && at[2] !== CENTER;
-        const show = centerLeft || (i !== CENTER && strip.locked && i !== at[1] && i !== at[2]);
+        const show = centerLeft || (i !== CENTER && strip.locked);
         nodes[i].mark.hidden = !show;
-        nodes[i].mark.textContent = show ? '🧀' : '';
-        nodes[i].mark.style.filter = show ? 'blur(0.8px)' : '';
+        nodes[i].mark.innerHTML = show ? '<img src="./images/cheese.png" alt="Cheese">' : '';
+        // nodes[i].mark.style.filter = show ? 'blur(0.8px)' : '';
         nodes[i].mark.style.textShadow = show ? '1px 1px 10px #ffe344, 0 0 1em #ffe344, 0 0 0.2em #ffe344' : '';
       });
-    }
-
-    function onMatch(player) {
-      const index = at[player];
-      return index !== CENTER && strips[index] && strips[index].locked ? '🧀' : '';
     }
 
     function render() {
