@@ -2,6 +2,7 @@
 // shortcut: repeat events stay flagged, movement uses the first edge only.
 const pinKeys = {};
 const pinMap = {};
+let joystickMapChanged = false;
 const joystickControls = [
   ['P1 Up', 'ArrowUp'],
   ['P1 Down', 'ArrowDown'],
@@ -25,7 +26,8 @@ const joystickControls = [
   ['P2 Z', ''],
   ['Share 1', ' '],
   ['Share 2', ''],
-  ['Share 3', '']
+  ['Share 3', ''],
+  ['Share 4', '']
 ];
 const controlKeys = Object.fromEntries(joystickControls);
 
@@ -45,11 +47,55 @@ function assignJoystickPin(pin, name) {
     if (other === pin || pinMap[other] === name) delete pinMap[other];
   }
   pinMap[pin] = name;
+  joystickMapChanged = true;
   try { localStorage.setItem('joystick-map', JSON.stringify(pinMap)); } catch (_) { /* private mode */ }
   applyPinMap();
 }
 
+function replaceJoystickMap(nextMap) {
+  if (!nextMap || typeof nextMap !== 'object' || Array.isArray(nextMap)) {
+    throw new TypeError('Joystick setup must be a JSON object.');
+  }
+  const entries = Object.entries(nextMap);
+  const names = new Set();
+  for (const [pin, name] of entries) {
+    if (!/^(?:[A-Z]\d+|[A-Z]_[A-Z]\d+)$/.test(pin)) {
+      throw new TypeError(`Invalid joystick pin: ${pin}`);
+    }
+    if (typeof name !== 'string' || !Object.prototype.hasOwnProperty.call(controlKeys, name)) {
+      throw new TypeError(`Unknown joystick control for pin ${pin}.`);
+    }
+    if (names.has(name)) throw new TypeError(`Control ${name} is assigned more than once.`);
+    names.add(name);
+  }
+  for (const pin of Object.keys(pinMap)) delete pinMap[pin];
+  Object.assign(pinMap, nextMap);
+  joystickMapChanged = true;
+  try { localStorage.setItem('joystick-map', JSON.stringify(pinMap)); } catch (_) { /* private mode */ }
+  applyPinMap();
+}
+
+function hasSavedJoystickMap() {
+  try { return localStorage.getItem('joystick-map') !== null; } catch (_) { return false; }
+}
+
+async function loadDefaultJoystickMap() {
+  try {
+    if (hasSavedJoystickMap()) return;
+    const response = await fetch('./joystick-setup.json');
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const defaultMap = await response.json();
+    if (joystickMapChanged || hasSavedJoystickMap()) return;
+    replaceJoystickMap(defaultMap);
+  } catch (error) {
+    const message = `Could not load default joystick setup: ${error.message || String(error)}`;
+    console.error(message);
+    window.dispatchEvent(new CustomEvent('joystick-map-default-error', { detail: message }));
+  }
+}
+
 loadJoystickMap();
+loadDefaultJoystickMap();
 if (typeof window !== 'undefined' && window.addEventListener) {
   window.addEventListener('storage', event => {
     if (event.key === 'joystick-map') loadJoystickMap();
@@ -228,5 +274,6 @@ window.pinMap = pinMap;
 window.joystickControls = joystickControls;
 window.readJoystickLines = readJoystickLines;
 window.assignJoystickPin = assignJoystickPin;
+window.replaceJoystickMap = replaceJoystickMap;
 window.loadJoystickMap = loadJoystickMap;
 window.createJoystick = createJoystick;

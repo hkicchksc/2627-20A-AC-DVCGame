@@ -32,16 +32,27 @@
       bottom: 8px;
       left: 0;
       right: 0;
+      height: 56px;
       font-size: 56px;
       line-height: 1;
       text-align: center;
       pointer-events: none;
     }
+    .mark img {
+      position: absolute;
+      left: 50%;
+      width: 56px;
+      height: 56px;
+      transform: translateX(-50%);
+      object-fit: contain;
+    }
+    .box img, .deck h2 img { width: 1em; height: 1em; object-fit: contain; vertical-align: middle; }
     .box {
       position: absolute;
       z-index: 3;
       bottom: 12px;
       width: calc(100% / 11);
+      transition: bottom 180ms ease;
       pointer-events: none;
       font-size: min(68px, 12vw);
       line-height: 1;
@@ -105,6 +116,60 @@
     }
     #joystick-status { position: fixed; z-index: 7; top: 64px; left: 18px; max-width: 260px; margin: 0; font-size: 12px; }
     #allow-joystick[hidden], #joystick-status[hidden], #config[hidden], #welcome[hidden] { display: none; }
+    #joystick-hints {
+      position: fixed;
+      z-index: 6;
+      right: 18px;
+      bottom: 18px;
+      left: 18px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 8px;
+      pointer-events: none;
+      user-select: none;
+    }
+    #joystick-hints[hidden] { display: none; }
+    .joystick-hint-group { display: flex; align-items: center; gap: 8px; }
+    .joystick-hint {
+      position: relative;
+      display: grid;
+      flex: none;
+      width: 88px;
+      aspect-ratio: 1;
+      place-items: center;
+      border: 2px solid rgba(255, 255, 255, .3);
+      border-radius: 50%;
+      color: rgba(255, 255, 255, .58);
+      background: rgba(23, 24, 22, .14);
+      box-shadow: inset 0 0 0 7px rgba(255, 255, 255, .035);
+    }
+    .joystick-hint-label { position: absolute; top: 10px; font-size: 9px; font-weight: 700; letter-spacing: .08em; }
+    .joystick-hint-arrows { display: flex; align-items: center; gap: 5px; font-size: 25px; line-height: 1; }
+    .joystick-hint-center { width: 7px; height: 7px; border-radius: 50%; background: rgba(255, 255, 255, .42); }
+    .joystick-action-hints { display: grid; grid-template-columns: repeat(3, 36px); gap: 5px; }
+    .joystick-action-hint {
+      display: grid;
+      width: 36px;
+      aspect-ratio: 1;
+      place-items: center;
+      border: 1px solid rgba(255, 255, 255, .24);
+      border-radius: 50%;
+      color: rgba(255, 255, 255, .58);
+      background: rgba(23, 24, 22, .14);
+      font-size: 10px;
+      font-weight: 700;
+    }
+    @media (max-width: 500px) {
+      #joystick-hints { right: 12px; bottom: 12px; left: 12px; gap: 4px; }
+      .joystick-hint-group { gap: 4px; }
+      .joystick-hint { width: 56px; }
+      .joystick-hint-label { top: 7px; }
+      .joystick-hint-arrows { gap: 3px; font-size: 17px; }
+      .joystick-hint-center { width: 5px; height: 5px; }
+      .joystick-action-hints { grid-template-columns: repeat(3, 26px); gap: 3px; }
+      .joystick-action-hint { width: 26px; font-size: 8px; }
+    }
     #config {
       position: fixed;
       z-index: 8;
@@ -124,7 +189,10 @@
       background: rgba(23, 24, 22, .94);
     }
     #map-prompt { margin: 0 0 12px; }
-    #pad { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+    #pad { display: grid; gap: 10px; margin-bottom: 12px; }
+    .map-row { display: grid; gap: 6px; }
+    .map-row-label { color: #aaa99f; font-size: 12px; font-weight: 700; }
+    .map-controls { display: flex; flex-wrap: wrap; gap: 6px; }
     #pad button, #skip-map {
       min-width: 4.2rem;
       padding: 8px 10px;
@@ -134,6 +202,17 @@
       color: inherit;
       cursor: pointer;
     }
+    #config-actions { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+    #map-file-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+    #map-file-actions button {
+      padding: 8px 10px;
+      border: 1px solid #44453f;
+      border-radius: 8px;
+      background: #20211e;
+      color: inherit;
+      cursor: pointer;
+    }
+    #map-file-status { min-height: 1.4em; margin: 0; color: #aaa99f; }
     #pad button.on { border-color: #d1fb73; color: #d1fb73; }
     #welcome {
       position: fixed;
@@ -193,19 +272,40 @@
     
     <p class="level-goal">調整相片直至相似度達 95%</p>
   </section>
-  <div id="fallback" hidden>Image unavailable. Check your internet connection and reload.</div>
+  <div id="fallback" hidden>Image unavailable. Check that the local images folder is present and reload.</div>
   <div id="config" hidden>
     <div class="card">
       <p id="map-prompt">C closes.</p>
-      <div id="pad"></div>
-      <button type="button" id="skip-map">Skip</button>
+      <div id="pad">
+        <div class="map-row">
+          <span class="map-row-label">P1</span>
+          <div class="map-controls" id="pad-p1"></div>
+        </div>
+        <div class="map-row">
+          <span class="map-row-label">P2</span>
+          <div class="map-controls" id="pad-p2"></div>
+        </div>
+        <div class="map-row">
+          <span class="map-row-label">Shared</span>
+          <div class="map-controls" id="pad-shared"></div>
+        </div>
+      </div>
+      <p id="map-file-status" role="status"></p>
+      <div id="config-actions">
+        <button type="button" id="skip-map">Skip</button>
+        <div id="map-file-actions">
+          <button type="button" id="save-map">Save setup as JSON</button>
+          <button type="button" id="load-map">Load setup from JSON</button>
+          <input type="file" id="map-file" accept=".json,application/json" hidden>
+        </div>
+      </div>
     </div>
   </div>
   <div id="welcome">
     <h1>Ways of Tuning</h1>
     <div class="decks">
       <section class="deck">
-        <h2>🐭</h2>
+        <h2><img src="./images/mouse.png" alt="Mouse"></h2>
         <div class="layout blue">
           <div class="stick"><b>← →</b><small>arrows</small></div>
           <div class="face">
@@ -215,7 +315,7 @@
         </div>
       </section>
       <section class="deck">
-        <h2>🐹</h2>
+        <h2><img src="./images/hamster.png" alt="Hamster"></h2>
         <div class="layout red">
           <div class="stick"><b>A D</b><small>left right</small></div>
           <div class="face">
@@ -229,31 +329,71 @@
       <b>H</b> = hue, <b>S</b> = saturation, <b>L</b> = lightness<br> 
       <b>Upper row</b> tunes up +<br>
       <b>Bottom row</b> tunes down -<br>
+      <b>Q</b> autotunes strips except those occupied by players
     </p>
     <button type="button" id="start">Click Space to Start</button>
   </div>
   <button type="button" id="allow-joystick" hidden>Allow joystick</button>
   <p id="joystick-status" role="status" hidden></p>
+  <div id="joystick-hints" aria-hidden="true" hidden>
+    <div class="joystick-hint-group">
+      <div class="joystick-hint">
+        <span class="joystick-hint-label">P1</span>
+        <span class="joystick-hint-arrows"><span>←</span><span class="joystick-hint-center"></span><span>→</span></span>
+      </div>
+      <div class="joystick-action-hints">
+        <span class="joystick-action-hint">H+</span><span class="joystick-action-hint">S+</span><span class="joystick-action-hint">L+</span>
+        <span class="joystick-action-hint">H−</span><span class="joystick-action-hint">S−</span><span class="joystick-action-hint">L−</span>
+      </div>
+    </div>
+    <div class="joystick-hint-group">
+      <div class="joystick-action-hints">
+        <span class="joystick-action-hint">H+</span><span class="joystick-action-hint">S+</span><span class="joystick-action-hint">L+</span>
+        <span class="joystick-action-hint">H−</span><span class="joystick-action-hint">S−</span><span class="joystick-action-hint">L−</span>
+      </div>
+      <div class="joystick-hint">
+        <span class="joystick-hint-label">P2</span>
+        <span class="joystick-hint-arrows"><span>←</span><span class="joystick-hint-center"></span><span>→</span></span>
+      </div>
+    </div>
+  </div>
   <script src="joystick.js"></script>
   <script src="central-client.js"></script>
   <script src="remote.js"></script>
   <script>
     const images = [
-      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4015571178714403489.webp', caption: 'School volleyball · CreativeHK' },
-      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4010448831913228017.webp', caption: 'Beach volleyball · CreativeHK' },
-      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4013348841663313305.jpg', caption: 'Art exhibition · CreativeHK' },
-      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4013505767495918965.webp', caption: 'School basketball · CreativeHK' },
-      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4012019490690778221.webp', caption: 'Creative film visit · CreativeHK' },
-      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4011773240712339459.webp', caption: 'Dunhuang study tour · CreativeHK' },
-      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4011284848949975254.webp', caption: 'Outdoor volleyball · CreativeHK' },
-      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4009203920534737778.webp', caption: 'Island field trip · CreativeHK' },
-      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4009116567384301493.webp', caption: 'Climbing activity · CreativeHK' },
-      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4009042070345970752.webp', caption: 'Beach cleanup · CreativeHK' },
-      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4008907981415591392.webp', caption: 'School excursion · CreativeHK' },
-      { src: 'https://www.creativehk.edu.hk/images/instagram/instagram_hksc_official_4006114497890051393.webp', caption: 'Dunhuang field trip · CreativeHK' },
-      { src: 'https://a.storyblok.com/f/246847/1334x1334/6e0617894a/dsc00535.webp', caption: 'Hands-on design workshop · CreativeHK' },
-      { src: 'https://a.storyblok.com/f/246847/2102x1402/1622733f17/dsc02505_-1.webp', caption: 'Gallery movement workshop · CreativeHK' },
-      { src: 'https://a.storyblok.com/f/246847/3976x2652/121f8009e4/dsc09106-1.webp', caption: 'Studio critique · CreativeHK' }
+      { src: './images/DVC001.WEBP', caption: 'Local photo DVC001' },
+      { src: './images/DVC002.WEBP', caption: 'Local photo DVC002' },
+      { src: './images/DVC003.WEBP', caption: 'Local photo DVC003' },
+      { src: './images/DVC004.WEBP', caption: 'Local photo DVC004' },
+      { src: './images/DVC005.WEBP', caption: 'Local photo DVC005' },
+      { src: './images/DVC006.WEBP', caption: 'Local photo DVC006' },
+      { src: './images/DVC007.WEBP', caption: 'Local photo DVC007' },
+      { src: './images/DVC008.WEBP', caption: 'Local photo DVC008' },
+      { src: './images/DVC009.WEBP', caption: 'Local photo DVC009' },
+      { src: './images/DVC010.WEBP', caption: 'Local photo DVC010' },
+      { src: './images/DVC011.WEBP', caption: 'Local photo DVC011' },
+      { src: './images/DVC012.WEBP', caption: 'Local photo DVC012' },
+      { src: './images/DVC013.WEBP', caption: 'Local photo DVC013' },
+      { src: './images/DVC014.WEBP', caption: 'Local photo DVC014' },
+      { src: './images/DVC015.WEBP', caption: 'Local photo DVC015' },
+      { src: './images/DVC016.WEBP', caption: 'Local photo DVC016' },
+      { src: './images/DVC017.WEBP', caption: 'Local photo DVC017' },
+      { src: './images/DVC018.WEBP', caption: 'Local photo DVC018' },
+      { src: './images/DVC019.WEBP', caption: 'Local photo DVC019' },
+      { src: './images/DVC020.WEBP', caption: 'Local photo DVC020' },
+      { src: './images/DVC021.WEBP', caption: 'Local photo DVC021' },
+      { src: './images/DVC022.WEBP', caption: 'Local photo DVC022' },
+      { src: './images/DVC023.WEBP', caption: 'Local photo DVC023' },
+      { src: './images/DVC024.WEBP', caption: 'Local photo DVC024' },
+      { src: './images/DVC025.WEBP', caption: 'Local photo DVC025' },
+      { src: './images/DVC026.WEBP', caption: 'Local photo DVC026' },
+      { src: './images/DVC027.WEBP', caption: 'Local photo DVC027' },
+      { src: './images/DVC028.WEBP', caption: 'Local photo DVC028' },
+      { src: './images/DVC029.WEBP', caption: 'Local photo DVC029' },
+      { src: './images/DVC030.WEBP', caption: 'Local photo DVC030' },
+      { src: './images/DVC031.WEBP', caption: 'Local photo DVC031' },
+      { src: './images/DVC032.WEBP', caption: 'Local photo DVC032' }
     ];
     for (let i = images.length - 1; i > 0; i -= 1) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -298,10 +438,8 @@
     const box2 = document.createElement('div');
     box1.className = 'box p1';
     box2.className = 'box p2';
-    box1.textContent = '🐭';
-    box2.textContent = '🐹';
-    box1.style.filter = 'blur(0.8px)';
-    box2.style.filter = 'blur(0.8px)';
+    box1.innerHTML = '<img src="./images/mouse.png" alt="Mouse">';
+    box2.innerHTML = '<img src="./images/hamster.png" alt="Hamster">';
     box1.style.textShadow = "1px 1px 10px #c6bed3, 0 0 1em #c6bed3, 0 0 0.2em #c6bed3";
     box2.style.textShadow = "1px 1px 10px #fdb183, 0 0 1em #fdb183, 0 0 0.2em #fdb183";
     board.append(box1, box2);
@@ -314,6 +452,10 @@
     let winTimer = 0;
     let timerInterval = 0;
     let stageStart = 0;
+    let joystickConnected = false;
+    let lastPlayerInputAt = 0;
+    let idleHslTimer = 0;
+    let idleHslResumeTimer = 0;
 
     const randomStep = (min, max, step) => Number((min + Math.floor(Math.random() * ((max - min) / step + 1)) * step).toFixed(2));
 
@@ -355,35 +497,83 @@
     function placeBoxes() {
       box1.style.left = `${at[1] * 100 / 11}%`;
       box2.style.left = `${at[2] * 100 / 11}%`;
+      box1.style.bottom = at[1] !== CENTER && strips[at[1]] && strips[at[1]].locked ? '76px' : '12px';
+      box2.style.bottom = at[2] !== CENTER && strips[at[2]] && strips[at[2]].locked ? '76px' : '12px';
       const share = at[1] === at[2];
-      box1.style.transform = share ? 'translateX(-22%)' : '';
-      box2.style.transform = share ? 'translateX(22%)' : '';
-      box1.textContent = `🐭${onMatch(1)}`;
-      box2.textContent = `🐹${onMatch(2)}`;
+      box1.style.transform = share ? 'translateX(22%)' : '';
+      box2.style.transform = share ? 'translateX(-22%)' : '';
+      box1.innerHTML = '<img src="./images/mouse.png" alt="Mouse">';
+      box2.innerHTML = '<img src="./images/hamster.png" alt="Hamster">';
       strips.forEach((strip, i) => {
         const centerLeft = i === CENTER && at[1] !== CENTER && at[2] !== CENTER;
-        const show = centerLeft || (i !== CENTER && strip.locked && i !== at[1] && i !== at[2]);
+        const show = centerLeft || (i !== CENTER && strip.locked);
         nodes[i].mark.hidden = !show;
-        nodes[i].mark.textContent = show ? '🧀' : '';
-        nodes[i].mark.style.filter = show ? 'blur(0.8px)' : '';
+        nodes[i].mark.innerHTML = show ? '<img src="./images/cheese.png" alt="Cheese">' : '';
+        // nodes[i].mark.style.filter = show ? 'blur(0.8px)' : '';
         nodes[i].mark.style.textShadow = show ? '1px 1px 10px #ffe344, 0 0 1em #ffe344, 0 0 0.2em #ffe344' : '';
       });
     }
 
-    function onMatch(player) {
-      const index = at[player];
-      return index !== CENTER && strips[index] && strips[index].locked ? '🧀' : '';
-    }
-
     function render() {
-      strips.forEach((strip, i) => {
-        const node = nodes[i];
-        node.img.style.filter = strip.center ? '' : `hue-rotate(${strip.hue}deg) saturate(${strip.saturation}) brightness(${strip.lightness})`;
-      });
+      renderStripFilters();
       placeBoxes();
       levelNumber.textContent = String(round + 1);
       if (levelGoal) levelGoal.textContent = `調整相片直至相似度達 ${lockAt()}%`;
       centralStatus();
+    }
+
+    function renderStripFilters() {
+      strips.forEach((strip, i) => {
+        const node = nodes[i];
+        node.img.style.filter = strip.center ? '' : `hue-rotate(${strip.hue}deg) saturate(${strip.saturation}) brightness(${strip.lightness})`;
+      });
+    }
+
+    function randomDrift(value, [min, max], amount) {
+      return Math.max(min, Math.min(max, value + (Math.random() * 2 - 1) * amount));
+    }
+
+    function stopIdleHslAnimation() {
+      if (idleHslTimer) clearInterval(idleHslTimer);
+      idleHslTimer = 0;
+    }
+
+    function startIdleHslAnimation() {
+      if (!started || !joystickConnected || idleHslTimer) return;
+      idleHslTimer = setInterval(() => {
+        if (!started || !joystickConnected) {
+          stopIdleHslAnimation();
+          return;
+        }
+        strips.forEach((strip, index) => {
+          if (index === CENTER) return;
+          strip.hue = randomDrift(strip.hue, bounds.hue, 2);
+          strip.saturation = randomDrift(strip.saturation, bounds.saturation, 0.02);
+          strip.lightness = randomDrift(strip.lightness, bounds.lightness, 0.01);
+        });
+        renderStripFilters();
+      }, 120);
+    }
+
+    function scheduleIdleHslAnimation() {
+      if (idleHslResumeTimer) clearTimeout(idleHslResumeTimer);
+      idleHslResumeTimer = 0;
+      if (!started || !joystickConnected) return;
+      const delay = lastPlayerInputAt ? Math.max(0, 10_000 - (Date.now() - lastPlayerInputAt)) : 0;
+      if (!delay) {
+        startIdleHslAnimation();
+        return;
+      }
+      idleHslResumeTimer = setTimeout(() => {
+        idleHslResumeTimer = 0;
+        if (Date.now() - lastPlayerInputAt >= 10_000) startIdleHslAnimation();
+      }, delay);
+    }
+
+    function markPlayerActed() {
+      lastPlayerInputAt = Date.now();
+      stopIdleHslAnimation();
+      scheduleIdleHslAnimation();
     }
 
     function startTimer() {
@@ -406,6 +596,7 @@
       }
       render();
       startTimer();
+      scheduleIdleHslAnimation();
     }
 
     function nextRound() {
@@ -418,6 +609,10 @@
 
     function movePlayer(player, dir) {
       const who = stage === 2 ? mix[player] : player;
+      moveCharacter(who, dir);
+    }
+
+    function moveCharacter(who, dir) {
       const other = at[who === 1 ? 2 : 1];
       const next = stepTo(at[who], dir, i => strips[i].locked || i === other);
       if (next === at[who]) return;
@@ -435,38 +630,60 @@
       strip[channel] = Number(Math.max(min, Math.min(max, strip[channel] + signOf[action] * steps[channel])).toFixed(precision));
       if (scoreOf(strip) >= lockAt()) {
         strip.locked = true;
-        if (strips.every((item, i) => i === CENTER || item.locked) && !winTimer) {
-          winTimer = setTimeout(nextRound, 700);
-          centralSend({
-            type: 'signal',
-            reason: 'round',
-            phase: 'clear',
-            score: round + 1,
-            update: `Round ${round + 1} cleared`,
-            summary: `Round ${round + 1} cleared`,
-            detail: { round: round + 1 }
-          });
-          sendOsc('clear', `Round ${round + 1} cleared`, round + 1);
-        }
+        finishRoundIfComplete();
       }
+      render();
+    }
+
+    function finishRoundIfComplete() {
+      if (!strips.every((item, i) => i === CENTER || item.locked) || winTimer) return;
+      winTimer = setTimeout(nextRound, 700);
+      centralSend({ type: 'prop', kind: 'drawing' });
+      centralSend({
+        type: 'signal',
+        reason: 'round',
+        phase: 'clear',
+        score: round + 1,
+        update: `Round ${round + 1} cleared`,
+        summary: `Round ${round + 1} cleared`,
+        detail: { round: round + 1 }
+      });
+      sendOsc('clear', `Round ${round + 1} cleared`, round + 1);
+    }
+
+    function autoTune() {
+      markPlayerActed();
+      strips.forEach((strip, index) => {
+        if (index === CENTER || index === at[1] || index === at[2] || strip.locked) return;
+        strip.hue = 0;
+        strip.saturation = 1;
+        strip.lightness = 1;
+        strip.locked = true;
+      });
+      finishRoundIfComplete();
       render();
     }
 
     const tuneAt = {};
 
-    function onNamed(name, repeat) {
+    function onNamed(name, repeat, swapPlayers = false) {
       const match = /^P([12]) (Left|Right|A|B|C|X|Y|Z)$/.exec(name);
       if (!match) return;
+      markPlayerActed();
       const player = Number(match[1]);
+      const targetPlayer = swapPlayers ? 3 - player : player;
       const action = match[2] === 'Left' ? 'left' : match[2] === 'Right' ? 'right' : match[2];
       if (action === 'left' || action === 'right') {
-        if (!repeat) movePlayer(player, action === 'left' ? -1 : 1);
+        if (!repeat) {
+          if (swapPlayers) moveCharacter(targetPlayer, action === 'left' ? -1 : 1);
+          else movePlayer(player, action === 'left' ? -1 : 1);
+        }
         return;
       }
       const now = Date.now();
       if (repeat && now - (tuneAt[name] || 0) < 70) return;
       tuneAt[name] = now;
-      tune(player, action);
+      tune(targetPlayer, action);
     }
 
     const keyboard = {
@@ -484,6 +701,7 @@
 
     const joystickNote = document.querySelector('#joystick-status');
     const allowJoystick = document.querySelector('#allow-joystick');
+    const joystickHints = document.querySelector('#joystick-hints');
     const serialState = { buffer: '', held: '' };
     const joy = createJoystick({
       onText(chunk) {
@@ -502,17 +720,26 @@
             continue;
           }
           const name = pinMap[event.pin];
-          if (name) onNamed(name, event.repeat);
+          if (name) onNamed(name, event.repeat, true);
         }
       },
       onStatus(kind, message) {
         const connected = kind === 'connected';
+        joystickConnected = connected;
         joystickNote.hidden = allowJoystick.hidden = connected;
+        joystickHints.hidden = !connected;
+        if (connected) scheduleIdleHslAnimation();
+        else {
+          stopIdleHslAnimation();
+          if (idleHslResumeTimer) clearTimeout(idleHslResumeTimer);
+          idleHslResumeTimer = 0;
+        }
         joystickNote.textContent = message || {
           'needs-permission': 'Click Allow joystick once. After that it connects on its own.',
           disconnected: 'Joystick disconnected.',
           error: 'Joystick error.'
         }[kind] || '';
+        if (connected && !welcome.hidden) begin();
       }
     });
     allowJoystick.addEventListener('click', () => { joy.requestPort(); });
@@ -528,14 +755,24 @@
     }
     document.querySelector('#start').addEventListener('click', begin);
     const mapPromptEl = document.querySelector('#map-prompt');
-    const pad = document.querySelector('#pad');
+    const mapFileStatus = document.querySelector('#map-file-status');
+    const mapFile = document.querySelector('#map-file');
+    window.addEventListener('joystick-map-default-error', event => {
+      mapFileStatus.textContent = event.detail;
+    });
+    const pads = {
+      P1: document.querySelector('#pad-p1'),
+      P2: document.querySelector('#pad-p2'),
+      Shared: document.querySelector('#pad-shared')
+    };
     const chips = {};
     let mapAt = -1;
     joystickControls.forEach(([name], index) => {
       const chip = document.createElement('button');
       chip.type = 'button';
       chip.addEventListener('click', () => { mapAt = index; mapPrompt(); });
-      pad.append(chip);
+      const group = name.startsWith('P1 ') ? 'P1' : name.startsWith('P2 ') ? 'P2' : 'Shared';
+      pads[group].append(chip);
       chips[name] = chip;
     });
     function refreshChips() {
@@ -561,6 +798,34 @@
       mapAt += 1;
       mapPrompt();
     });
+    document.querySelector('#save-map').addEventListener('click', () => {
+      try {
+        const file = new Blob([JSON.stringify(pinMap, null, 2) + '\n'], { type: 'application/json' });
+        const url = URL.createObjectURL(file);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'joystick-setup.json';
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        mapFileStatus.textContent = 'Joystick setup saved as joystick-setup.json.';
+      } catch (error) {
+        mapFileStatus.textContent = `Could not save joystick setup: ${error.message || String(error)}`;
+      }
+    });
+    document.querySelector('#load-map').addEventListener('click', () => mapFile.click());
+    mapFile.addEventListener('change', async () => {
+      const file = mapFile.files && mapFile.files[0];
+      if (!file) return;
+      try {
+        replaceJoystickMap(JSON.parse(await file.text()));
+        mapPrompt();
+        mapFileStatus.textContent = `Loaded joystick setup from ${file.name}.`;
+      } catch (error) {
+        mapFileStatus.textContent = `Could not load joystick setup: ${error.message || String(error)}`;
+      } finally {
+        mapFile.value = '';
+      }
+    });
 
     window.addEventListener('keydown', event => {
       if (event.altKey || event.ctrlKey || event.metaKey) return;
@@ -581,7 +846,13 @@
       if (!config.hidden) return;
       if (event.key === ' ' && !event.repeat) {
         event.preventDefault();
+        markPlayerActed();
         nextRound();
+        return;
+      }
+      if ((event.key === 'q' || event.key === 'Q') && !event.repeat) {
+        event.preventDefault();
+        autoTune();
         return;
       }
       const name = keyboard[event.key];
@@ -592,9 +863,13 @@
     function restartGame() {
       if (winTimer) clearTimeout(winTimer);
       if (timerInterval) clearInterval(timerInterval);
+      stopIdleHslAnimation();
+      if (idleHslResumeTimer) clearTimeout(idleHslResumeTimer);
       winTimer = 0;
       timerInterval = 0;
+      idleHslResumeTimer = 0;
       started = false;
+      lastPlayerInputAt = 0;
       round = 0;
       stage = 1;
       mix = { 1: 1, 2: 2 };
@@ -633,6 +908,7 @@
       };
     function centralSend(message) {
       if (message.type === 'signal') central.signal(message);
+      else if (message.type === 'prop') central.prop(message.kind);
       else central.status(message);
     }
     let oscKey = '';
