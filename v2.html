@@ -116,6 +116,60 @@
     }
     #joystick-status { position: fixed; z-index: 7; top: 64px; left: 18px; max-width: 260px; margin: 0; font-size: 12px; }
     #allow-joystick[hidden], #joystick-status[hidden], #config[hidden], #welcome[hidden] { display: none; }
+    #joystick-hints {
+      position: fixed;
+      z-index: 6;
+      right: 18px;
+      bottom: 18px;
+      left: 18px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 8px;
+      pointer-events: none;
+      user-select: none;
+    }
+    #joystick-hints[hidden] { display: none; }
+    .joystick-hint-group { display: flex; align-items: center; gap: 8px; }
+    .joystick-hint {
+      position: relative;
+      display: grid;
+      flex: none;
+      width: 88px;
+      aspect-ratio: 1;
+      place-items: center;
+      border: 2px solid rgba(255, 255, 255, .3);
+      border-radius: 50%;
+      color: rgba(255, 255, 255, .58);
+      background: rgba(23, 24, 22, .14);
+      box-shadow: inset 0 0 0 7px rgba(255, 255, 255, .035);
+    }
+    .joystick-hint-label { position: absolute; top: 10px; font-size: 9px; font-weight: 700; letter-spacing: .08em; }
+    .joystick-hint-arrows { display: flex; align-items: center; gap: 5px; font-size: 25px; line-height: 1; }
+    .joystick-hint-center { width: 7px; height: 7px; border-radius: 50%; background: rgba(255, 255, 255, .42); }
+    .joystick-action-hints { display: grid; grid-template-columns: repeat(3, 36px); gap: 5px; }
+    .joystick-action-hint {
+      display: grid;
+      width: 36px;
+      aspect-ratio: 1;
+      place-items: center;
+      border: 1px solid rgba(255, 255, 255, .24);
+      border-radius: 50%;
+      color: rgba(255, 255, 255, .58);
+      background: rgba(23, 24, 22, .14);
+      font-size: 10px;
+      font-weight: 700;
+    }
+    @media (max-width: 500px) {
+      #joystick-hints { right: 12px; bottom: 12px; left: 12px; gap: 4px; }
+      .joystick-hint-group { gap: 4px; }
+      .joystick-hint { width: 56px; }
+      .joystick-hint-label { top: 7px; }
+      .joystick-hint-arrows { gap: 3px; font-size: 17px; }
+      .joystick-hint-center { width: 5px; height: 5px; }
+      .joystick-action-hints { grid-template-columns: repeat(3, 26px); gap: 3px; }
+      .joystick-action-hint { width: 26px; font-size: 8px; }
+    }
     #config {
       position: fixed;
       z-index: 8;
@@ -280,6 +334,28 @@
   </div>
   <button type="button" id="allow-joystick" hidden>Allow joystick</button>
   <p id="joystick-status" role="status" hidden></p>
+  <div id="joystick-hints" aria-hidden="true" hidden>
+    <div class="joystick-hint-group">
+      <div class="joystick-hint">
+        <span class="joystick-hint-label">P1</span>
+        <span class="joystick-hint-arrows"><span>←</span><span class="joystick-hint-center"></span><span>→</span></span>
+      </div>
+      <div class="joystick-action-hints">
+        <span class="joystick-action-hint">H+</span><span class="joystick-action-hint">S+</span><span class="joystick-action-hint">L+</span>
+        <span class="joystick-action-hint">H−</span><span class="joystick-action-hint">S−</span><span class="joystick-action-hint">L−</span>
+      </div>
+    </div>
+    <div class="joystick-hint-group">
+      <div class="joystick-action-hints">
+        <span class="joystick-action-hint">H+</span><span class="joystick-action-hint">S+</span><span class="joystick-action-hint">L+</span>
+        <span class="joystick-action-hint">H−</span><span class="joystick-action-hint">S−</span><span class="joystick-action-hint">L−</span>
+      </div>
+      <div class="joystick-hint">
+        <span class="joystick-hint-label">P2</span>
+        <span class="joystick-hint-arrows"><span>←</span><span class="joystick-hint-center"></span><span>→</span></span>
+      </div>
+    </div>
+  </div>
   <script src="joystick.js"></script>
   <script src="central-client.js"></script>
   <script src="remote.js"></script>
@@ -476,6 +552,10 @@
 
     function movePlayer(player, dir) {
       const who = stage === 2 ? mix[player] : player;
+      moveCharacter(who, dir);
+    }
+
+    function moveCharacter(who, dir) {
       const other = at[who === 1 ? 2 : 1];
       const next = stepTo(at[who], dir, i => strips[i].locked || i === other);
       if (next === at[who]) return;
@@ -512,19 +592,23 @@
 
     const tuneAt = {};
 
-    function onNamed(name, repeat) {
+    function onNamed(name, repeat, swapPlayers = false) {
       const match = /^P([12]) (Left|Right|A|B|C|X|Y|Z)$/.exec(name);
       if (!match) return;
       const player = Number(match[1]);
+      const targetPlayer = swapPlayers ? 3 - player : player;
       const action = match[2] === 'Left' ? 'left' : match[2] === 'Right' ? 'right' : match[2];
       if (action === 'left' || action === 'right') {
-        if (!repeat) movePlayer(player, action === 'left' ? -1 : 1);
+        if (!repeat) {
+          if (swapPlayers) moveCharacter(targetPlayer, action === 'left' ? -1 : 1);
+          else movePlayer(player, action === 'left' ? -1 : 1);
+        }
         return;
       }
       const now = Date.now();
       if (repeat && now - (tuneAt[name] || 0) < 70) return;
       tuneAt[name] = now;
-      tune(player, action);
+      tune(targetPlayer, action);
     }
 
     const keyboard = {
@@ -542,6 +626,7 @@
 
     const joystickNote = document.querySelector('#joystick-status');
     const allowJoystick = document.querySelector('#allow-joystick');
+    const joystickHints = document.querySelector('#joystick-hints');
     const serialState = { buffer: '', held: '' };
     const joy = createJoystick({
       onText(chunk) {
@@ -560,17 +645,19 @@
             continue;
           }
           const name = pinMap[event.pin];
-          if (name) onNamed(name, event.repeat);
+          if (name) onNamed(name, event.repeat, true);
         }
       },
       onStatus(kind, message) {
         const connected = kind === 'connected';
         joystickNote.hidden = allowJoystick.hidden = connected;
+        joystickHints.hidden = !connected;
         joystickNote.textContent = message || {
           'needs-permission': 'Click Allow joystick once. After that it connects on its own.',
           disconnected: 'Joystick disconnected.',
           error: 'Joystick error.'
         }[kind] || '';
+        if (connected && !welcome.hidden) begin();
       }
     });
     allowJoystick.addEventListener('click', () => { joy.requestPort(); });
