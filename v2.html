@@ -135,7 +135,10 @@
       background: rgba(23, 24, 22, .94);
     }
     #map-prompt { margin: 0 0 12px; }
-    #pad { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+    #pad { display: grid; gap: 10px; margin-bottom: 12px; }
+    .map-row { display: grid; gap: 6px; }
+    .map-row-label { color: #aaa99f; font-size: 12px; font-weight: 700; }
+    .map-controls { display: flex; flex-wrap: wrap; gap: 6px; }
     #pad button, #skip-map {
       min-width: 4.2rem;
       padding: 8px 10px;
@@ -145,6 +148,17 @@
       color: inherit;
       cursor: pointer;
     }
+    #config-actions { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+    #map-file-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+    #map-file-actions button {
+      padding: 8px 10px;
+      border: 1px solid #44453f;
+      border-radius: 8px;
+      background: #20211e;
+      color: inherit;
+      cursor: pointer;
+    }
+    #map-file-status { min-height: 1.4em; margin: 0; color: #aaa99f; }
     #pad button.on { border-color: #d1fb73; color: #d1fb73; }
     #welcome {
       position: fixed;
@@ -208,8 +222,29 @@
   <div id="config" hidden>
     <div class="card">
       <p id="map-prompt">C closes.</p>
-      <div id="pad"></div>
-      <button type="button" id="skip-map">Skip</button>
+      <div id="pad">
+        <div class="map-row">
+          <span class="map-row-label">P1</span>
+          <div class="map-controls" id="pad-p1"></div>
+        </div>
+        <div class="map-row">
+          <span class="map-row-label">P2</span>
+          <div class="map-controls" id="pad-p2"></div>
+        </div>
+        <div class="map-row">
+          <span class="map-row-label">Shared</span>
+          <div class="map-controls" id="pad-shared"></div>
+        </div>
+      </div>
+      <p id="map-file-status" role="status"></p>
+      <div id="config-actions">
+        <button type="button" id="skip-map">Skip</button>
+        <div id="map-file-actions">
+          <button type="button" id="save-map">Save setup as JSON</button>
+          <button type="button" id="load-map">Load setup from JSON</button>
+          <input type="file" id="map-file" accept=".json,application/json" hidden>
+        </div>
+      </div>
     </div>
   </div>
   <div id="welcome">
@@ -384,8 +419,8 @@
       box1.style.bottom = at[1] !== CENTER && strips[at[1]] && strips[at[1]].locked ? '76px' : '12px';
       box2.style.bottom = at[2] !== CENTER && strips[at[2]] && strips[at[2]].locked ? '76px' : '12px';
       const share = at[1] === at[2];
-      box1.style.transform = share ? 'translateX(-22%)' : '';
-      box2.style.transform = share ? 'translateX(22%)' : '';
+      box1.style.transform = share ? 'translateX(22%)' : '';
+      box2.style.transform = share ? 'translateX(-22%)' : '';
       box1.innerHTML = '<img src="./images/mouse.png" alt="Mouse">';
       box2.innerHTML = '<img src="./images/hamster.png" alt="Hamster">';
       strips.forEach((strip, i) => {
@@ -551,14 +586,24 @@
     }
     document.querySelector('#start').addEventListener('click', begin);
     const mapPromptEl = document.querySelector('#map-prompt');
-    const pad = document.querySelector('#pad');
+    const mapFileStatus = document.querySelector('#map-file-status');
+    const mapFile = document.querySelector('#map-file');
+    window.addEventListener('joystick-map-default-error', event => {
+      mapFileStatus.textContent = event.detail;
+    });
+    const pads = {
+      P1: document.querySelector('#pad-p1'),
+      P2: document.querySelector('#pad-p2'),
+      Shared: document.querySelector('#pad-shared')
+    };
     const chips = {};
     let mapAt = -1;
     joystickControls.forEach(([name], index) => {
       const chip = document.createElement('button');
       chip.type = 'button';
       chip.addEventListener('click', () => { mapAt = index; mapPrompt(); });
-      pad.append(chip);
+      const group = name.startsWith('P1 ') ? 'P1' : name.startsWith('P2 ') ? 'P2' : 'Shared';
+      pads[group].append(chip);
       chips[name] = chip;
     });
     function refreshChips() {
@@ -583,6 +628,34 @@
       if (mapAt < 0) return;
       mapAt += 1;
       mapPrompt();
+    });
+    document.querySelector('#save-map').addEventListener('click', () => {
+      try {
+        const file = new Blob([JSON.stringify(pinMap, null, 2) + '\n'], { type: 'application/json' });
+        const url = URL.createObjectURL(file);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'joystick-setup.json';
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        mapFileStatus.textContent = 'Joystick setup saved as joystick-setup.json.';
+      } catch (error) {
+        mapFileStatus.textContent = `Could not save joystick setup: ${error.message || String(error)}`;
+      }
+    });
+    document.querySelector('#load-map').addEventListener('click', () => mapFile.click());
+    mapFile.addEventListener('change', async () => {
+      const file = mapFile.files && mapFile.files[0];
+      if (!file) return;
+      try {
+        replaceJoystickMap(JSON.parse(await file.text()));
+        mapPrompt();
+        mapFileStatus.textContent = `Loaded joystick setup from ${file.name}.`;
+      } catch (error) {
+        mapFileStatus.textContent = `Could not load joystick setup: ${error.message || String(error)}`;
+      } finally {
+        mapFile.value = '';
+      }
     });
 
     window.addEventListener('keydown', event => {
