@@ -329,6 +329,7 @@
       <b>H</b> = hue, <b>S</b> = saturation, <b>L</b> = lightness<br> 
       <b>Upper row</b> tunes up +<br>
       <b>Bottom row</b> tunes down -<br>
+      <b>Q</b> autotunes strips except those occupied by players
     </p>
     <button type="button" id="start">Click Space to Start</button>
   </div>
@@ -451,6 +452,10 @@
     let winTimer = 0;
     let timerInterval = 0;
     let stageStart = 0;
+    let joystickConnected = false;
+    let lastPlayerInputAt = 0;
+    let idleHslTimer = 0;
+    let idleHslResumeTimer = 0;
 
     const randomStep = (min, max, step) => Number((min + Math.floor(Math.random() * ((max - min) / step + 1)) * step).toFixed(2));
 
@@ -510,14 +515,65 @@
     }
 
     function render() {
-      strips.forEach((strip, i) => {
-        const node = nodes[i];
-        node.img.style.filter = strip.center ? '' : `hue-rotate(${strip.hue}deg) saturate(${strip.saturation}) brightness(${strip.lightness})`;
-      });
+      renderStripFilters();
       placeBoxes();
       levelNumber.textContent = String(round + 1);
       if (levelGoal) levelGoal.textContent = `調整相片直至相似度達 ${lockAt()}%`;
       centralStatus();
+    }
+
+    function renderStripFilters() {
+      strips.forEach((strip, i) => {
+        const node = nodes[i];
+        node.img.style.filter = strip.center ? '' : `hue-rotate(${strip.hue}deg) saturate(${strip.saturation}) brightness(${strip.lightness})`;
+      });
+    }
+
+    function randomDrift(value, [min, max], amount) {
+      return Math.max(min, Math.min(max, value + (Math.random() * 2 - 1) * amount));
+    }
+
+    function stopIdleHslAnimation() {
+      if (idleHslTimer) clearInterval(idleHslTimer);
+      idleHslTimer = 0;
+    }
+
+    function startIdleHslAnimation() {
+      if (!started || !joystickConnected || idleHslTimer) return;
+      idleHslTimer = setInterval(() => {
+        if (!started || !joystickConnected) {
+          stopIdleHslAnimation();
+          return;
+        }
+        strips.forEach((strip, index) => {
+          if (index === CENTER) return;
+          strip.hue = randomDrift(strip.hue, bounds.hue, 2);
+          strip.saturation = randomDrift(strip.saturation, bounds.saturation, 0.02);
+          strip.lightness = randomDrift(strip.lightness, bounds.lightness, 0.01);
+        });
+        renderStripFilters();
+      }, 120);
+    }
+
+    function scheduleIdleHslAnimation() {
+      if (idleHslResumeTimer) clearTimeout(idleHslResumeTimer);
+      idleHslResumeTimer = 0;
+      if (!started || !joystickConnected) return;
+      const delay = lastPlayerInputAt ? Math.max(0, 10_000 - (Date.now() - lastPlayerInputAt)) : 0;
+      if (!delay) {
+        startIdleHslAnimation();
+        return;
+      }
+      idleHslResumeTimer = setTimeout(() => {
+        idleHslResumeTimer = 0;
+        if (Date.now() - lastPlayerInputAt >= 10_000) startIdleHslAnimation();
+      }, delay);
+    }
+
+    function markPlayerActed() {
+      lastPlayerInputAt = Date.now();
+      stopIdleHslAnimation();
+      scheduleIdleHslAnimation();
     }
 
     function startTimer() {
@@ -540,6 +596,7 @@
       }
       render();
       startTimer();
+      scheduleIdleHslAnimation();
     }
 
     function nextRound() {
@@ -573,20 +630,37 @@
       strip[channel] = Number(Math.max(min, Math.min(max, strip[channel] + signOf[action] * steps[channel])).toFixed(precision));
       if (scoreOf(strip) >= lockAt()) {
         strip.locked = true;
-        if (strips.every((item, i) => i === CENTER || item.locked) && !winTimer) {
-          winTimer = setTimeout(nextRound, 700);
-          centralSend({
-            type: 'signal',
-            reason: 'round',
-            phase: 'clear',
-            score: round + 1,
-            update: `Round ${round + 1} cleared`,
-            summary: `Round ${round + 1} cleared`,
-            detail: { round: round + 1 }
-          });
-          sendOsc('clear', `Round ${round + 1} cleared`, round + 1);
-        }
+        finishRoundIfComplete();
       }
+      render();
+    }
+
+    function finishRoundIfComplete() {
+      if (!strips.every((item, i) => i === CENTER || item.locked) || winTimer) return;
+      winTimer = setTimeout(nextRound, 700);
+      centralSend({ type: 'prop', kind: 'drawing' });
+      centralSend({
+        type: 'signal',
+        reason: 'round',
+        phase: 'clear',
+        score: round + 1,
+        update: `Round ${round + 1} cleared`,
+        summary: `Round ${round + 1} cleared`,
+        detail: { round: round + 1 }
+      });
+      sendOsc('clear', `Round ${round + 1} cleared`, round + 1);
+    }
+
+    function autoTune() {
+      markPlayerActed();
+      strips.forEach((strip, index) => {
+        if (index === CENTER || index === at[1] || index === at[2] || strip.locked) return;
+        strip.hue = 0;
+        strip.saturation = 1;
+        strip.lightness = 1;
+        strip.locked = true;
+      });
+      finishRoundIfComplete();
       render();
     }
 
@@ -595,6 +669,7 @@
     function onNamed(name, repeat, swapPlayers = false) {
       const match = /^P([12]) (Left|Right|A|B|C|X|Y|Z)$/.exec(name);
       if (!match) return;
+      markPlayerActed();
       const player = Number(match[1]);
       const targetPlayer = swapPlayers ? 3 - player : player;
       const action = match[2] === 'Left' ? 'left' : match[2] === 'Right' ? 'right' : match[2];
@@ -650,8 +725,15 @@
       },
       onStatus(kind, message) {
         const connected = kind === 'connected';
+        joystickConnected = connected;
         joystickNote.hidden = allowJoystick.hidden = connected;
         joystickHints.hidden = !connected;
+        if (connected) scheduleIdleHslAnimation();
+        else {
+          stopIdleHslAnimation();
+          if (idleHslResumeTimer) clearTimeout(idleHslResumeTimer);
+          idleHslResumeTimer = 0;
+        }
         joystickNote.textContent = message || {
           'needs-permission': 'Click Allow joystick once. After that it connects on its own.',
           disconnected: 'Joystick disconnected.',
@@ -764,7 +846,13 @@
       if (!config.hidden) return;
       if (event.key === ' ' && !event.repeat) {
         event.preventDefault();
+        markPlayerActed();
         nextRound();
+        return;
+      }
+      if ((event.key === 'q' || event.key === 'Q') && !event.repeat) {
+        event.preventDefault();
+        autoTune();
         return;
       }
       const name = keyboard[event.key];
@@ -775,9 +863,13 @@
     function restartGame() {
       if (winTimer) clearTimeout(winTimer);
       if (timerInterval) clearInterval(timerInterval);
+      stopIdleHslAnimation();
+      if (idleHslResumeTimer) clearTimeout(idleHslResumeTimer);
       winTimer = 0;
       timerInterval = 0;
+      idleHslResumeTimer = 0;
       started = false;
+      lastPlayerInputAt = 0;
       round = 0;
       stage = 1;
       mix = { 1: 1, 2: 2 };
@@ -816,6 +908,7 @@
       };
     function centralSend(message) {
       if (message.type === 'signal') central.signal(message);
+      else if (message.type === 'prop') central.prop(message.kind);
       else central.status(message);
     }
     let oscKey = '';
