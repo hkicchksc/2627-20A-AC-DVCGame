@@ -69,10 +69,11 @@
     .level-info {
       position: fixed;
       z-index: 6;
-      top: 10px;
+      top: 50%;
       left: 50%;
-      max-width: calc(100vw - 36px);
-      transform: translateX(-50%);
+      width: calc(100vw - 36px);
+      max-width: 760px;
+      transform: translate(-50%, -50%);
       color: #fff;
       text-align: center;
       text-shadow: 0 2px 14px rgba(0, 0, 0, .85);
@@ -88,6 +89,7 @@
       text-shadow: 0 2px 14px rgba(0, 0, 0, .85);
     }
     .level-title { margin: 0; font-size: clamp(38px, 5vw, 62px); font-weight: 800; line-height: .98; letter-spacing: .02em; }
+    .level-goal { position: absolute; top: 100%; left: 0; right: 0; }
     .level-goal, #stage-label { margin: 8px 0 0; font-size: 13px; }
     #stage-label { font-weight: 700; }
     @media (max-width: 440px) {
@@ -296,7 +298,7 @@
   <div id="board"></div>
   <section class="level-info" aria-label="Current level">
     <h1 class="level-title">
-      Stage #<span id="level-number">1</span>
+      🖼️#<span id="level-number">1</span>&nbsp;
       <br>
       <span id="stage-timer">00:00</span>
     </h1>
@@ -532,6 +534,10 @@
     let winTimer = 0;
     let timerInterval = 0;
     let stageStart = 0;
+    let timersStarted = false;
+    let overallStart = 0;
+    let nextLevelUpAt = 0;
+    let overallTimerInterval = 0;
     let lastPlayerInputAt = 0;
     let idleAnimationTimer = 0;
     let idleAnimationResumeTimer = 0;
@@ -612,7 +618,8 @@
         const { row, column } = stripPosition(index);
         const bottom = !isCenterStrip(index) && strips[index] && strips[index].locked ? 76 : 12;
         box.style.left = `${column * 100 / (animationLevel === 3 ? 11 : count)}%`;
-        box.style.bottom = animationLevel === 3 && row === 0 ? `calc(50% + ${bottom}px)` : `${bottom}px`;
+        box.style.top = animationLevel === 3 && row === 0 ? '12px' : 'auto';
+        box.style.bottom = animationLevel === 3 && row === 0 ? 'auto' : `${bottom}px`;
         box.style.transform = sharing.length > 1 ? (player === sharing[0] ? 'translateX(22%)' : 'translateX(-22%)') : '';
         box.innerHTML = `<img src="${character.src}" alt="${character.alt}">`;
         box.style.textShadow = character.shadow;
@@ -775,6 +782,7 @@
     }
 
     function markPlayerActed() {
+      startOverallTimer();
       lastPlayerInputAt = Date.now();
       stopIdleAnimation();
       scheduleIdleAnimation();
@@ -782,11 +790,31 @@
 
     function startTimer() {
       if (timerInterval) clearInterval(timerInterval);
-      stageStart = Date.now();
+      timerInterval = 0;
       stageTimer.textContent = '00:00';
+      if (!timersStarted) {
+        stageStart = 0;
+        return;
+      }
+      stageStart = Date.now();
       timerInterval = setInterval(() => {
         const seconds = Math.max(0, Math.floor((Date.now() - stageStart) / 1000));
         stageTimer.textContent = `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+      }, 250);
+    }
+
+    function startOverallTimer() {
+      if (timersStarted) return;
+      timersStarted = true;
+      overallStart = Date.now();
+      nextLevelUpAt = overallStart + 10_000;
+      startTimer();
+      overallTimerInterval = setInterval(() => {
+        const now = Date.now();
+        while (now >= nextLevelUpAt) {
+          if (animationLevel < 3) setAnimationLevel(animationLevel + 1);
+          nextLevelUpAt += 10_000;
+        }
       }, 250);
     }
 
@@ -1090,11 +1118,16 @@
     function restartGame() {
       if (winTimer) clearTimeout(winTimer);
       if (timerInterval) clearInterval(timerInterval);
+      if (overallTimerInterval) clearInterval(overallTimerInterval);
       stopIdleAnimation();
       stopStripSwing();
       if (idleAnimationResumeTimer) clearTimeout(idleAnimationResumeTimer);
       winTimer = 0;
       timerInterval = 0;
+      overallTimerInterval = 0;
+      timersStarted = false;
+      overallStart = 0;
+      nextLevelUpAt = 0;
       idleAnimationResumeTimer = 0;
       started = false;
       lastPlayerInputAt = 0;
