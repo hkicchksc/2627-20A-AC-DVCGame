@@ -519,8 +519,8 @@
       2: { src: './images/hamster.png', alt: 'Hamster', shadow: '1px 1px 10px #fdb183, 0 0 1em #fdb183, 0 0 0.2em #fdb183' }
     };
     const levelThreeCharacters = {
-      1: standardCharacters[1],
-      2: standardCharacters[2],
+      1: standardCharacters[2],
+      2: standardCharacters[1],
       3: { src: './images/dog.png', alt: 'Dog', shadow: '1px 1px 10px #f2c08a, 0 0 1em #f2c08a, 0 0 0.2em #f2c08a' },
       4: { src: './images/bug.png', alt: 'Bug', shadow: '1px 1px 10px #9f78a7, 0 0 1em #9f78a7, 0 0 0.2em #9f78a7' }
     };
@@ -835,7 +835,7 @@
 
     function deal(image) {
       syncStripNodes();
-      at = animationLevel === 3 ? [0, 10, 20, 0, 11] : [0, CENTER, CENTER];
+      at = animationLevel === 3 ? [0, 20, 10, 0, 11] : [0, CENTER, CENTER];
       strips = Array.from({ length: stripCount() }, (_, i) => (isCenterStrip(i) ? { center: true, locked: true } : { ...randomColor(), locked: false }));
       tuningDirections = strips.map(() => ({
         saturation: { sign: 0, direction: 0 },
@@ -987,6 +987,17 @@
     const allowJoystick = document.querySelector('#allow-joystick');
     const joystickHints = document.querySelector('#joystick-hints');
     const serialState = { buffer: '', held: '' };
+    const levelThreeJoystickAliases = {
+      'P1 Up': 'P3 Up', 'P1 Down': 'P3 Down',
+      'P1 X': 'P3 X', 'P1 Y': 'P3 Y', 'P1 Z': 'P3 Z',
+      'P2 Up': 'P4 Up', 'P2 Down': 'P4 Down',
+      'P2 X': 'P4 X', 'P2 Y': 'P4 Y', 'P2 Z': 'P4 Z'
+    };
+    function joystickControlForLevel(name) {
+      if (animationLevel !== 3) return name;
+      const alias = levelThreeJoystickAliases[name];
+      return alias && !Object.values(pinMap).includes(alias) ? alias : name;
+    }
     const joy = createJoystick({
       onText(chunk) {
         for (const event of readJoystickLines(serialState, chunk)) {
@@ -1000,7 +1011,7 @@
             continue;
           }
           const name = pinMap[event.pin];
-          if (name) onNamed(name, event.repeat, true);
+          if (name) onNamed(joystickControlForLevel(name), event.repeat, true);
         }
       },
       onStatus(kind, message) {
@@ -1149,7 +1160,7 @@
       round = 0;
       stage = 1;
       mix = { 1: 1, 2: 2 };
-      at = animationLevel === 3 ? [0, 10, 20, 0, 11] : [0, CENTER, CENTER];
+      at = animationLevel === 3 ? [0, 20, 10, 0, 11] : [0, CENTER, CENTER];
       config.hidden = true;
       begin();
     }
