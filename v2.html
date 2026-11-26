@@ -471,7 +471,6 @@
     let winTimer = 0;
     let timerInterval = 0;
     let stageStart = 0;
-    let joystickConnected = false;
     let lastPlayerInputAt = 0;
     let idleHslTimer = 0;
     let idleHslResumeTimer = 0;
@@ -548,44 +547,58 @@
       });
     }
 
-    function randomDrift(value, [min, max], amount) {
-      return Math.max(min, Math.min(max, value + (Math.random() * 2 - 1) * amount));
-    }
-
     function stopIdleHslAnimation() {
       if (idleHslTimer) clearInterval(idleHslTimer);
       idleHslTimer = 0;
     }
 
     function startIdleHslAnimation() {
-      if (!started || !joystickConnected || idleHslTimer) return;
+      if (!started || idleHslTimer) return;
+      const startedAt = Date.now();
+      const initialHue = strips.map(strip => strip.hue);
+      const periods = strips.map(() => ({
+        hue: 6_000 + Math.random() * 8_000,
+        saturation: 4_000 + Math.random() * 6_000,
+        lightness: 4_000 + Math.random() * 6_000
+      }));
+      const swingPhase = (value, [min, max]) => {
+        const progress = Math.max(0, Math.min(1, (value - min) / (max - min)));
+        return Math.acos(1 - 2 * progress) / (2 * Math.PI);
+      };
+      const swingPhases = strips.map(strip => ({
+        saturation: swingPhase(strip.saturation, bounds.saturation),
+        lightness: swingPhase(strip.lightness, bounds.lightness)
+      }));
+      const wave = phase => (1 - Math.cos(phase * 2 * Math.PI)) / 2;
+      const hueRange = bounds.hue[1] - bounds.hue[0];
       idleHslTimer = setInterval(() => {
-        if (!started || !joystickConnected) {
+        if (!started) {
           stopIdleHslAnimation();
           return;
         }
+        const elapsed = Date.now() - startedAt;
         strips.forEach((strip, index) => {
-          if (index === CENTER) return;
-          strip.hue = randomDrift(strip.hue, bounds.hue, 2);
-          strip.saturation = randomDrift(strip.saturation, bounds.saturation, 0.02);
-          strip.lightness = randomDrift(strip.lightness, bounds.lightness, 0.01);
+          if (index === CENTER || strip.locked) return;
+          strip.hue = bounds.hue[0] + ((initialHue[index] - bounds.hue[0] + elapsed * hueRange / periods[index].hue) % hueRange);
+          strip.saturation = bounds.saturation[0] + wave((swingPhases[index].saturation + elapsed / periods[index].saturation) % 1) * (bounds.saturation[1] - bounds.saturation[0]);
+          strip.lightness = bounds.lightness[0] + wave((swingPhases[index].lightness + elapsed / periods[index].lightness) % 1) * (bounds.lightness[1] - bounds.lightness[0]);
         });
         renderStripFilters();
-      }, 120);
+      }, 50);
     }
 
     function scheduleIdleHslAnimation() {
       if (idleHslResumeTimer) clearTimeout(idleHslResumeTimer);
       idleHslResumeTimer = 0;
-      if (!started || !joystickConnected) return;
-      const delay = lastPlayerInputAt ? Math.max(0, 10_000 - (Date.now() - lastPlayerInputAt)) : 0;
+      if (!started) return;
+      const delay = Math.max(0, 5_000 - (Date.now() - lastPlayerInputAt));
       if (!delay) {
         startIdleHslAnimation();
         return;
       }
       idleHslResumeTimer = setTimeout(() => {
         idleHslResumeTimer = 0;
-        if (Date.now() - lastPlayerInputAt >= 10_000) startIdleHslAnimation();
+        if (Date.now() - lastPlayerInputAt >= 5_000) startIdleHslAnimation();
       }, delay);
     }
 
@@ -740,15 +753,8 @@
       },
       onStatus(kind, message) {
         const connected = kind === 'connected';
-        joystickConnected = connected;
         joystickNote.hidden = allowJoystick.hidden = connected;
         joystickHints.hidden = !connected;
-        if (connected) scheduleIdleHslAnimation();
-        else {
-          stopIdleHslAnimation();
-          if (idleHslResumeTimer) clearTimeout(idleHslResumeTimer);
-          idleHslResumeTimer = 0;
-        }
         joystickNote.textContent = message || {
           'needs-permission': 'Click Allow joystick once. After that it connects on its own.',
           disconnected: 'Joystick disconnected.',
@@ -763,6 +769,7 @@
     function begin() {
       if (started) return;
       started = true;
+      lastPlayerInputAt = Date.now();
       deal(images[0]);
     }
     const mapPromptEl = document.querySelector('#map-prompt');
