@@ -45,6 +45,8 @@
       text-align: center;
       pointer-events: none;
     }
+    #board[data-level="3"] .mark { top: 8px; bottom: auto; }
+    #board[data-level="3"] .strip.bottom-row .mark { top: auto; bottom: 8px; }
     .mark img {
       position: absolute;
       left: 50%;
@@ -169,6 +171,34 @@
       font-size: 10px;
       font-weight: 700;
     }
+    .joystick-hint-p3, .joystick-hint-p4 { display: none; }
+    #board[data-level="3"] ~ #joystick-hints:not([hidden]) {
+      top: 18px;
+      right: 18px;
+      bottom: 18px;
+      left: 18px;
+      display: block;
+    }
+    #board[data-level="3"] ~ #joystick-hints .joystick-hint-p1 { position: absolute; bottom: 0; left: 0; }
+    #board[data-level="3"] ~ #joystick-hints .joystick-hint-p2 { position: absolute; right: 0; bottom: 0; }
+    #board[data-level="3"] ~ #joystick-hints .joystick-hint-p3 { position: absolute; top: 0; left: 0; display: flex; }
+    #board[data-level="3"] ~ #joystick-hints .joystick-hint-p4 { position: absolute; top: 0; right: 0; display: flex; }
+    #board[data-level="3"] ~ #joystick-hints .joystick-hint-p1 .joystick-action-hint:nth-child(-n+3),
+    #board[data-level="3"] ~ #joystick-hints .joystick-hint-p2 .joystick-action-hint:nth-child(-n+3),
+    #board[data-level="3"] ~ #joystick-hints .joystick-hint-p3 .joystick-action-hint:nth-child(n+4),
+    #board[data-level="3"] ~ #joystick-hints .joystick-hint-p4 .joystick-action-hint:nth-child(n+4) { visibility: hidden; }
+    #board[data-level="3"] ~ #joystick-hints .joystick-action-hint {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0;
+      line-height: 1;
+    }
+    #board[data-level="3"] ~ #joystick-hints .joystick-action-hint:nth-child(3n+1)::after { content: 'H↻'; font-size: 10px; line-height: 1; }
+    #board[data-level="3"] ~ #joystick-hints .joystick-action-hint:nth-child(3n+2)::after { content: 'S↕'; font-size: 10px; line-height: 1; }
+    #board[data-level="3"] ~ #joystick-hints .joystick-action-hint:nth-child(3n)::after { content: 'L↕'; font-size: 10px; line-height: 1; }
+    #board[data-level="3"] ~ #joystick-hints .joystick-hint-p3 .joystick-hint-arrows,
+    #board[data-level="3"] ~ #joystick-hints .joystick-hint-p4 .joystick-hint-arrows { flex-direction: column; gap: 0; }
     @media (max-width: 500px) {
       #joystick-hints { right: 12px; bottom: 12px; left: 12px; gap: 4px; }
       .joystick-hint-group { gap: 4px; }
@@ -178,6 +208,7 @@
       .joystick-hint-center { width: 5px; height: 5px; }
       .joystick-action-hints { grid-template-columns: repeat(3, 26px); gap: 3px; }
       .joystick-action-hint { width: 26px; font-size: 8px; }
+      #board[data-level="3"] ~ #joystick-hints:not([hidden]) { top: 12px; right: 12px; bottom: 12px; left: 12px; }
     }
     #config {
       position: fixed;
@@ -375,7 +406,7 @@
   <button type="button" id="allow-joystick" hidden>Allow joystick</button>
   <p id="joystick-status" role="status" hidden></p>
   <div id="joystick-hints" aria-hidden="true" hidden>
-    <div class="joystick-hint-group">
+    <div class="joystick-hint-group joystick-hint-p1">
       <div class="joystick-hint">
         <span class="joystick-hint-label">P1</span>
         <span class="joystick-hint-arrows"><span>←</span><span class="joystick-hint-center"></span><span>→</span></span>
@@ -385,7 +416,7 @@
         <span class="joystick-action-hint">H−</span><span class="joystick-action-hint">S−</span><span class="joystick-action-hint">L−</span>
       </div>
     </div>
-    <div class="joystick-hint-group">
+    <div class="joystick-hint-group joystick-hint-p2">
       <div class="joystick-action-hints">
         <span class="joystick-action-hint">H+</span><span class="joystick-action-hint">S+</span><span class="joystick-action-hint">L+</span>
         <span class="joystick-action-hint">H−</span><span class="joystick-action-hint">S−</span><span class="joystick-action-hint">L−</span>
@@ -393,6 +424,26 @@
       <div class="joystick-hint">
         <span class="joystick-hint-label">P2</span>
         <span class="joystick-hint-arrows"><span>←</span><span class="joystick-hint-center"></span><span>→</span></span>
+      </div>
+    </div>
+    <div class="joystick-hint-group joystick-hint-p3">
+      <div class="joystick-hint">
+        <span class="joystick-hint-label">P3</span>
+        <span class="joystick-hint-arrows"><span>↑</span><span class="joystick-hint-center"></span><span>↓</span></span>
+      </div>
+      <div class="joystick-action-hints">
+        <span class="joystick-action-hint">H+</span><span class="joystick-action-hint">S+</span><span class="joystick-action-hint">L+</span>
+        <span class="joystick-action-hint">H−</span><span class="joystick-action-hint">S−</span><span class="joystick-action-hint">L−</span>
+      </div>
+    </div>
+    <div class="joystick-hint-group joystick-hint-p4">
+      <div class="joystick-action-hints">
+        <span class="joystick-action-hint">H+</span><span class="joystick-action-hint">S+</span><span class="joystick-action-hint">L+</span>
+        <span class="joystick-action-hint">H−</span><span class="joystick-action-hint">S−</span><span class="joystick-action-hint">L−</span>
+      </div>
+      <div class="joystick-hint">
+        <span class="joystick-hint-label">P4</span>
+        <span class="joystick-hint-arrows"><span>↑</span><span class="joystick-hint-center"></span><span>↓</span></span>
       </div>
     </div>
   </div>
@@ -496,6 +547,7 @@
         node.img.style.setProperty('--row', String(row));
         node.img.style.setProperty('--column', String(column));
         node.strip.classList.toggle('center-strip', center);
+        node.strip.classList.toggle('bottom-row', animationLevel === 3 && row === 1);
         node.strip.style.gridRow = animationLevel === 3 && !center ? String(row + 1) : '';
         node.strip.style.gridColumn = animationLevel === 3 ? String(column + 1) : '';
       });
@@ -556,6 +608,7 @@
     let lastPlayerInputAt = 0;
     let idleAnimationTimer = 0;
     let idleAnimationResumeTimer = 0;
+    let floatingTimer = 0;
     let swingTimer = 0;
 
     const randomStep = (min, max, step) => Number((min + Math.floor(Math.random() * ((max - min) / step + 1)) * step).toFixed(2));
@@ -667,7 +720,43 @@
     function stopIdleAnimation() {
       if (idleAnimationTimer) clearInterval(idleAnimationTimer);
       idleAnimationTimer = 0;
-      if (animationLevel === 3) nodes.forEach(node => { node.strip.style.transform = ''; });
+    }
+
+    function stopStripFloating() {
+      if (floatingTimer) clearInterval(floatingTimer);
+      floatingTimer = 0;
+      nodes.forEach(node => { node.strip.style.transform = ''; });
+    }
+
+    function startStripFloating() {
+      if (!started || animationLevel !== 3 || floatingTimer) return;
+      const startedAt = Date.now();
+      const floaters = strips.map(() => ({
+        xAmplitude: 2 + Math.random() * 4,
+        yAmplitude: 6 + Math.random() * 10,
+        xPeriod: 2_500 + Math.random() * 3_500,
+        yPeriod: 2_000 + Math.random() * 3_000,
+        xPhase: Math.random(),
+        yPhase: Math.random()
+      }));
+      floatingTimer = setInterval(() => {
+        if (!started || animationLevel !== 3) {
+          stopStripFloating();
+          return;
+        }
+        const elapsed = Date.now() - startedAt;
+        strips.forEach((strip, index) => {
+          const node = nodes[index];
+          if (isCenterStrip(index) || strip.locked) {
+            node.strip.style.transform = '';
+            return;
+          }
+          const float = floaters[index];
+          const x = Math.sin((float.xPhase + elapsed / float.xPeriod) * 2 * Math.PI) * float.xAmplitude;
+          const y = Math.sin((float.yPhase + elapsed / float.yPeriod) * 2 * Math.PI) * float.yAmplitude;
+          node.strip.style.transform = `translate(${x.toFixed(2)}px, ${y.toFixed(2)}px)`;
+        });
+      }, 50);
     }
 
     function stopStripSwing() {
@@ -693,14 +782,6 @@
         saturation: 4_000 + Math.random() * 6_000,
         lightness: 4_000 + Math.random() * 6_000
       }));
-      const floaters = strips.map(() => ({
-        xAmplitude: 2 + Math.random() * 4,
-        yAmplitude: 6 + Math.random() * 10,
-        xPeriod: 2_500 + Math.random() * 3_500,
-        yPeriod: 2_000 + Math.random() * 3_000,
-        xPhase: Math.random(),
-        yPhase: Math.random()
-      }));
       const swingPhase = (value, [min, max]) => {
         const progress = Math.max(0, Math.min(1, (value - min) / (max - min)));
         return Math.acos(1 - 2 * progress) / (2 * Math.PI);
@@ -720,18 +801,11 @@
         strips.forEach((strip, index) => {
           const node = nodes[index];
           if (isCenterStrip(index) || strip.locked) {
-            if (animationLevel === 3) node.strip.style.transform = '';
             return;
           }
           strip.hue = bounds.hue[0] + ((initialHue[index] - bounds.hue[0] + elapsed * hueRange / periods[index].hue) % hueRange);
           strip.saturation = bounds.saturation[0] + wave((swingPhases[index].saturation + elapsed / periods[index].saturation) % 1) * (bounds.saturation[1] - bounds.saturation[0]);
           strip.lightness = bounds.lightness[0] + wave((swingPhases[index].lightness + elapsed / periods[index].lightness) % 1) * (bounds.lightness[1] - bounds.lightness[0]);
-          if (animationLevel === 3) {
-            const float = floaters[index];
-            const x = Math.sin((float.xPhase + elapsed / float.xPeriod) * 2 * Math.PI) * float.xAmplitude;
-            const y = Math.sin((float.yPhase + elapsed / float.yPeriod) * 2 * Math.PI) * float.yAmplitude;
-            node.strip.style.transform = `translate(${x.toFixed(2)}px, ${y.toFixed(2)}px)`;
-          }
         });
         renderStripFilters();
       }, 50);
@@ -782,6 +856,7 @@
       animationLevel = level;
       config.classList.toggle('level-three', level === 3);
       stopIdleAnimation();
+      stopStripFloating();
       stopStripSwing();
       if (stripLayoutChanged) {
         if (winTimer) clearTimeout(winTimer);
@@ -835,7 +910,7 @@
 
     function deal(image) {
       syncStripNodes();
-      at = animationLevel === 3 ? [0, 20, 10, 0, 11] : [0, CENTER, CENTER];
+      at = animationLevel === 3 ? [0, 20, 11, 0, 10] : [0, CENTER, CENTER];
       strips = Array.from({ length: stripCount() }, (_, i) => (isCenterStrip(i) ? { center: true, locked: true } : { ...randomColor(), locked: false }));
       tuningDirections = strips.map(() => ({
         saturation: { sign: 0, direction: 0 },
@@ -849,6 +924,7 @@
       startTimer();
       scheduleIdleAnimation();
       if (animationLevel === 2) startStripSwing();
+      if (animationLevel === 3) startStripFloating();
     }
 
     function nextRound() {
@@ -947,7 +1023,10 @@
         return;
       }
       if (animationLevel === 3 && player >= 3 && (action === 'Up' || action === 'Down')) {
-        if (!repeat) moveCharacter(targetPlayer, action === 'Up' ? 1 : -1);
+        if (!repeat) {
+          const direction = action === 'Up' ? 1 : -1;
+          moveCharacter(targetPlayer, targetPlayer === 4 ? -direction : direction);
+        }
         return;
       }
       if (animationLevel !== 3 && (action === 'Up' || action === 'Down')) return;
@@ -1146,6 +1225,7 @@
       if (timerInterval) clearInterval(timerInterval);
       if (overallTimerInterval) clearInterval(overallTimerInterval);
       stopIdleAnimation();
+      stopStripFloating();
       stopStripSwing();
       if (idleAnimationResumeTimer) clearTimeout(idleAnimationResumeTimer);
       winTimer = 0;
@@ -1160,7 +1240,7 @@
       round = 0;
       stage = 1;
       mix = { 1: 1, 2: 2 };
-      at = animationLevel === 3 ? [0, 20, 10, 0, 11] : [0, CENTER, CENTER];
+      at = animationLevel === 3 ? [0, 20, 11, 0, 10] : [0, CENTER, CENTER];
       config.hidden = true;
       begin();
     }
