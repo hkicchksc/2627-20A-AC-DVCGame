@@ -15,17 +15,24 @@
     }
     * { box-sizing: border-box; }
     body { margin: 0; height: 100vh; height: 100dvh; overflow: hidden; background: #171816; }
-    #board { position: fixed; inset: 0; display: flex; }
+    #board { position: fixed; inset: 0; display: flex; --slice-width: 1100%; --slice-height: 100%; --strip-width: 9.0909%; }
+    #board[data-level="3"] { display: grid; grid-template: repeat(2, minmax(0, 1fr)) / repeat(11, minmax(0, 1fr)); }
     .strip { position: relative; flex: 1; overflow: hidden; }
     .strip img {
       position: absolute;
       top: 0;
-      height: 100%;
-      width: 1100%;
+      height: var(--slice-height);
+      width: var(--slice-width);
       max-width: none;
       left: calc(var(--i) * -100%);
       object-fit: cover;
     }
+    #board[data-level="3"] .strip img {
+      top: calc(var(--row) * -100%);
+      left: calc(var(--column) * -100%);
+    }
+    #board[data-level="3"] .strip.center-strip { grid-row: 1 / span 2; }
+    #board[data-level="3"] .strip.center-strip img { top: 0; height: 100%; }
     .mark {
       position: absolute;
       z-index: 4;
@@ -51,7 +58,7 @@
       position: absolute;
       z-index: 3;
       bottom: 12px;
-      width: calc(100% / 11);
+      width: var(--strip-width);
       transition: bottom 180ms ease;
       pointer-events: none;
       font-size: min(68px, 12vw);
@@ -199,6 +206,7 @@
     .map-row { display: grid; grid-template-columns: 38px minmax(0, 1fr); align-items: start; gap: 4px; }
     .map-row-label { padding-top: 6px; color: #aaa99f; font-size: 10px; font-weight: 700; }
     .map-controls { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 3px; }
+    #config:not(.level-three) .level-three-row, #config:not(.level-three) .level-three-help { display: none; }
     #pad button, #skip-map {
       min-width: 0;
       padding: 5px 2px;
@@ -325,7 +333,8 @@
         <p>
           <b>H</b> = hue, <b>S</b> = saturation, <b>L</b> = lightness
         </p>
-        <p>Animation: 1 = HSL cycle, 2 = strip swing (continues during input); 3 reserved for four players.</p>
+        <p>Press 1/2/3: HSL idle cycle / strip swing during input / four players.</p>
+        <p class="level-three-help">Level 3: 20 short strips in two rows around the central long strip. P1/P2 use ←/→ and A/B/C (+); P3/P4 use ↑/↓ and X/Y/Z (−). Hue wraps; saturation/brightness bounce between limits.</p>
       </div>
       <p id="map-prompt">C closes.</p>
       <div id="pad">
@@ -336,6 +345,14 @@
         <div class="map-row">
           <span class="map-row-label">P2</span>
           <div class="map-controls" id="pad-p2"></div>
+        </div>
+        <div class="map-row level-three-row">
+          <span class="map-row-label">P3</span>
+          <div class="map-controls" id="pad-p3"></div>
+        </div>
+        <div class="map-row level-three-row">
+          <span class="map-row-label">P4</span>
+          <div class="map-controls" id="pad-p4"></div>
         </div>
         <div class="map-row">
           <span class="map-row-label">Shared</span>
@@ -421,6 +438,18 @@
     }
 
     const CENTER = 5;
+    let animationLevel = 1;
+    function stripCount() { return animationLevel === 3 ? 21 : 11; }
+    function stripPosition(index) {
+      if (animationLevel !== 3) return { row: 0, column: index };
+      if (index === CENTER) return { row: 0, column: CENTER };
+      if (index < CENTER) return { row: 0, column: index };
+      if (index <= 10) return { row: 0, column: index };
+      if (index <= 15) return { row: 1, column: 21 - index };
+      return { row: 1, column: 20 - index };
+    }
+    function isCenterStrip(index) { return index === CENTER; }
+    function activePlayers() { return animationLevel === 3 ? [1, 2, 3, 4] : [1, 2]; }
     const steps = { hue: 5, saturation: 0.1, lightness: 0.05 };
     const bounds = { hue: [-180, 180], saturation: [0.4, 2], lightness: [0.55, 1.45] };
     const channelOf = { A: 'hue', X: 'hue', B: 'saturation', Y: 'saturation', C: 'lightness', Z: 'lightness' };
@@ -440,45 +469,97 @@
       if (levelGoal) levelGoal.textContent = `調整相片直至相似度達 ${lockAt()}%`;
     }
     const nodes = [];
-    for (let i = 0; i < 11; i += 1) {
-      const strip = document.createElement('div');
-      strip.className = 'strip';
-      const img = document.createElement('img');
-      img.alt = '';
-      img.decoding = 'async';
-      img.style.setProperty('--i', String(i));
-      const mark = document.createElement('span');
-      mark.className = 'mark';
-      mark.hidden = true;
-      strip.append(img, mark);
-      board.append(strip);
-      nodes.push({ img, mark, strip });
+    function syncStripNodes() {
+      const count = stripCount();
+      while (nodes.length > count) nodes.pop().strip.remove();
+      while (nodes.length < count) {
+        const strip = document.createElement('div');
+        strip.className = 'strip';
+        const img = document.createElement('img');
+        img.alt = '';
+        img.decoding = 'async';
+        img.style.setProperty('--i', String(nodes.length));
+        img.addEventListener('error', () => { document.querySelector('#fallback').hidden = false; });
+        const mark = document.createElement('span');
+        mark.className = 'mark';
+        mark.hidden = true;
+        strip.append(img, mark);
+        board.append(strip);
+        nodes.push({ img, mark, strip });
+      }
+      nodes.forEach((node, index) => {
+        const { row, column } = stripPosition(index);
+        const center = isCenterStrip(index);
+        node.img.style.setProperty('--i', String(index));
+        node.img.style.setProperty('--row', String(row));
+        node.img.style.setProperty('--column', String(column));
+        node.strip.classList.toggle('center-strip', center);
+        node.strip.style.gridRow = animationLevel === 3 && !center ? String(row + 1) : '';
+        node.strip.style.gridColumn = animationLevel === 3 ? String(column + 1) : '';
+      });
+      board.style.setProperty('--slice-width', `${(animationLevel === 3 ? 11 : count) * 100}%`);
+      board.style.setProperty('--slice-height', `${animationLevel === 3 ? 200 : 100}%`);
+      board.style.setProperty('--strip-width', `${100 / (animationLevel === 3 ? 11 : count)}%`);
+      board.dataset.level = String(animationLevel);
     }
+    syncStripNodes();
     const box1 = document.createElement('div');
     const box2 = document.createElement('div');
-    box1.className = 'box p1';
-    box2.className = 'box p2';
-    box1.innerHTML = '<img src="./images/mouse.png" alt="Mouse">';
-    box2.innerHTML = '<img src="./images/hamster.png" alt="Hamster">';
+    const box3 = document.createElement('div');
+    const box4 = document.createElement('div');
+    const playerBoxes = { 1: box1, 2: box2, 3: box3, 4: box4 };
+    Object.entries(playerBoxes).forEach(([player, box]) => { box.className = `box p${player}`; });
     box1.style.textShadow = "1px 1px 10px #c6bed3, 0 0 1em #c6bed3, 0 0 0.2em #c6bed3";
     box2.style.textShadow = "1px 1px 10px #fdb183, 0 0 1em #fdb183, 0 0 0.2em #fdb183";
-    board.append(box1, box2);
+    board.append(box1, box2, box3, box4);
+    const standardCharacters = {
+      1: { src: './images/mouse.png', alt: 'Mouse', shadow: '1px 1px 10px #c6bed3, 0 0 1em #c6bed3, 0 0 0.2em #c6bed3' },
+      2: { src: './images/hamster.png', alt: 'Hamster', shadow: '1px 1px 10px #fdb183, 0 0 1em #fdb183, 0 0 0.2em #fdb183' }
+    };
+    const levelThreeCharacters = {
+      1: standardCharacters[1],
+      2: standardCharacters[2],
+      3: { src: './images/dog.png', alt: 'Dog', shadow: '1px 1px 10px #f2c08a, 0 0 1em #f2c08a, 0 0 0.2em #f2c08a' },
+      4: { src: './images/bug.png', alt: 'Bug', shadow: '1px 1px 10px #9f78a7, 0 0 1em #9f78a7, 0 0 0.2em #9f78a7' }
+    };
 
     let stage = 1;
     let mix = { 1: 1, 2: 2 };
     let at = [0, 5, 5];
     let round = 0;
     let strips = [];
+    let tuningDirections = [];
     let winTimer = 0;
     let timerInterval = 0;
     let stageStart = 0;
     let lastPlayerInputAt = 0;
-    let animationLevel = 1;
     let idleAnimationTimer = 0;
     let idleAnimationResumeTimer = 0;
     let swingTimer = 0;
 
     const randomStep = (min, max, step) => Number((min + Math.floor(Math.random() * ((max - min) / step + 1)) * step).toFixed(2));
+
+    function cycleValue(value, min, max) {
+      const range = max - min;
+      return min + (((value - min) % range) + range) % range;
+    }
+
+    function swingTuningValue(value, min, max, step, sign, state) {
+      if (state.sign !== sign) {
+        state.sign = sign;
+        state.direction = sign;
+      }
+      const next = value + state.direction * step;
+      if (next >= max) {
+        state.direction = -1;
+        return max;
+      }
+      if (next <= min) {
+        state.direction = 1;
+        return min;
+      }
+      return next;
+    }
 
     function scoreOf(color) {
       const hueError = Math.abs(color.hue);
@@ -508,26 +589,37 @@
 
     function stepTo(index, dir, blocked) {
       let i = index;
-      while (true) {
+      for (let attempts = 0; attempts < stripCount(); attempts += 1) {
         i += dir;
-        if (i < 0 || i >= 11) return index;
-        if (i !== CENTER && !blocked(i)) return i;
+        if (animationLevel === 3) i = (i + stripCount()) % stripCount();
+        else if (i < 0 || i >= stripCount()) return index;
+        if (!isCenterStrip(i) && !blocked(i)) return i;
       }
+      return index;
     }
 
     function placeBoxes() {
-      box1.style.left = `${at[1] * 100 / 11}%`;
-      box2.style.left = `${at[2] * 100 / 11}%`;
-      box1.style.bottom = at[1] !== CENTER && strips[at[1]] && strips[at[1]].locked ? '76px' : '12px';
-      box2.style.bottom = at[2] !== CENTER && strips[at[2]] && strips[at[2]].locked ? '76px' : '12px';
-      const share = at[1] === at[2];
-      box1.style.transform = share ? 'translateX(22%)' : '';
-      box2.style.transform = share ? 'translateX(-22%)' : '';
-      box1.innerHTML = '<img src="./images/mouse.png" alt="Mouse">';
-      box2.innerHTML = '<img src="./images/hamster.png" alt="Hamster">';
+      const players = activePlayers();
+      const count = stripCount();
+      const characters = animationLevel === 3 ? levelThreeCharacters : standardCharacters;
+      Object.entries(playerBoxes).forEach(([playerId, box]) => {
+        const player = Number(playerId);
+        box.hidden = !players.includes(player);
+        if (box.hidden) return;
+        const index = at[player];
+        const sharing = players.filter(other => at[other] === index);
+        const character = characters[player];
+        const { row, column } = stripPosition(index);
+        const bottom = !isCenterStrip(index) && strips[index] && strips[index].locked ? 76 : 12;
+        box.style.left = `${column * 100 / (animationLevel === 3 ? 11 : count)}%`;
+        box.style.bottom = animationLevel === 3 && row === 0 ? `calc(50% + ${bottom}px)` : `${bottom}px`;
+        box.style.transform = sharing.length > 1 ? (player === sharing[0] ? 'translateX(22%)' : 'translateX(-22%)') : '';
+        box.innerHTML = `<img src="${character.src}" alt="${character.alt}">`;
+        box.style.textShadow = character.shadow;
+      });
       strips.forEach((strip, i) => {
-        const centerLeft = i === CENTER && at[1] !== CENTER && at[2] !== CENTER;
-        const show = centerLeft || (i !== CENTER && strip.locked);
+        const centerLeft = isCenterStrip(i) && players.every(player => at[player] !== i);
+        const show = centerLeft || (!isCenterStrip(i) && strip.locked);
         nodes[i].mark.hidden = !show;
         nodes[i].mark.innerHTML = show ? '<img src="./images/cheese.png" alt="Cheese">' : '';
         // nodes[i].mark.style.filter = show ? 'blur(0.8px)' : '';
@@ -546,13 +638,14 @@
     function renderStripFilters() {
       strips.forEach((strip, i) => {
         const node = nodes[i];
-        node.img.style.filter = strip.center ? '' : `hue-rotate(${strip.hue}deg) saturate(${strip.saturation}) brightness(${strip.lightness})`;
+        node.img.style.filter = isCenterStrip(i) ? '' : `hue-rotate(${strip.hue}deg) saturate(${strip.saturation}) brightness(${strip.lightness})`;
       });
     }
 
     function stopIdleAnimation() {
       if (idleAnimationTimer) clearInterval(idleAnimationTimer);
       idleAnimationTimer = 0;
+      if (animationLevel === 3) nodes.forEach(node => { node.strip.style.transform = ''; });
     }
 
     function stopStripSwing() {
@@ -563,12 +656,28 @@
 
     function startIdleAnimation() {
       if (!started || idleAnimationTimer) return;
+      if (animationLevel === 3) {
+        tuningDirections.forEach(state => {
+          state.saturation.sign = 0;
+          state.saturation.direction = 0;
+          state.lightness.sign = 0;
+          state.lightness.direction = 0;
+        });
+      }
       const startedAt = Date.now();
       const initialHue = strips.map(strip => strip.hue);
       const periods = strips.map(() => ({
         hue: 6_000 + Math.random() * 8_000,
         saturation: 4_000 + Math.random() * 6_000,
         lightness: 4_000 + Math.random() * 6_000
+      }));
+      const floaters = strips.map(() => ({
+        xAmplitude: 2 + Math.random() * 4,
+        yAmplitude: 6 + Math.random() * 10,
+        xPeriod: 2_500 + Math.random() * 3_500,
+        yPeriod: 2_000 + Math.random() * 3_000,
+        xPhase: Math.random(),
+        yPhase: Math.random()
       }));
       const swingPhase = (value, [min, max]) => {
         const progress = Math.max(0, Math.min(1, (value - min) / (max - min)));
@@ -587,10 +696,20 @@
         }
         const elapsed = Date.now() - startedAt;
         strips.forEach((strip, index) => {
-          if (index === CENTER || strip.locked) return;
+          const node = nodes[index];
+          if (isCenterStrip(index) || strip.locked) {
+            if (animationLevel === 3) node.strip.style.transform = '';
+            return;
+          }
           strip.hue = bounds.hue[0] + ((initialHue[index] - bounds.hue[0] + elapsed * hueRange / periods[index].hue) % hueRange);
           strip.saturation = bounds.saturation[0] + wave((swingPhases[index].saturation + elapsed / periods[index].saturation) % 1) * (bounds.saturation[1] - bounds.saturation[0]);
           strip.lightness = bounds.lightness[0] + wave((swingPhases[index].lightness + elapsed / periods[index].lightness) % 1) * (bounds.lightness[1] - bounds.lightness[0]);
+          if (animationLevel === 3) {
+            const float = floaters[index];
+            const x = Math.sin((float.xPhase + elapsed / float.xPeriod) * 2 * Math.PI) * float.xAmplitude;
+            const y = Math.sin((float.yPhase + elapsed / float.yPeriod) * 2 * Math.PI) * float.yAmplitude;
+            node.strip.style.transform = `translate(${x.toFixed(2)}px, ${y.toFixed(2)}px)`;
+          }
         });
         renderStripFilters();
       }, 50);
@@ -609,7 +728,7 @@
         const elapsed = Date.now() - startedAt;
         strips.forEach((strip, index) => {
           const node = nodes[index];
-          if (index === CENTER || strip.locked) {
+          if (isCenterStrip(index) || strip.locked) {
             node.strip.style.transform = '';
             return;
           }
@@ -635,13 +754,24 @@
     }
 
     function setAnimationLevel(level) {
-      if (level !== 1 && level !== 2) return;
+      if (level !== 1 && level !== 2 && level !== 3) return;
       if (level === animationLevel) return;
+      const stripLayoutChanged = (animationLevel === 3) !== (level === 3);
       animationLevel = level;
+      config.classList.toggle('level-three', level === 3);
       stopIdleAnimation();
-      if (level === 2) startStripSwing();
-      else stopStripSwing();
-      scheduleIdleAnimation();
+      stopStripSwing();
+      if (stripLayoutChanged) {
+        if (winTimer) clearTimeout(winTimer);
+        winTimer = 0;
+        round = 0;
+        stage = 1;
+        mix = { 1: 1, 2: 2 };
+        deal(images[0]);
+      } else {
+        if (level === 2) startStripSwing();
+        scheduleIdleAnimation();
+      }
     }
 
     function markPlayerActed() {
@@ -661,9 +791,13 @@
     }
 
     function deal(image) {
-      at[1] = CENTER;
-      at[2] = CENTER;
-      strips = Array.from({ length: 11 }, (_, i) => (i === CENTER ? { center: true, locked: true } : { ...randomColor(), locked: false }));
+      syncStripNodes();
+      at = animationLevel === 3 ? [0, 10, 11, 0, 20] : [0, CENTER, CENTER];
+      strips = Array.from({ length: stripCount() }, (_, i) => (isCenterStrip(i) ? { center: true, locked: true } : { ...randomColor(), locked: false }));
+      tuningDirections = strips.map(() => ({
+        saturation: { sign: 0, direction: 0 },
+        lightness: { sign: 0, direction: 0 }
+      }));
       for (const node of nodes) {
         node.img.src = image.src;
         node.img.alt = image.caption;
@@ -683,13 +817,13 @@
     }
 
     function movePlayer(player, dir) {
-      const who = stage === 2 ? mix[player] : player;
+      const who = animationLevel !== 3 && stage === 2 ? mix[player] : player;
       moveCharacter(who, dir);
     }
 
     function moveCharacter(who, dir) {
-      const other = at[who === 1 ? 2 : 1];
-      const next = stepTo(at[who], dir, i => strips[i].locked || i === other);
+      const otherPlayers = activePlayers().filter(player => player !== who);
+      const next = stepTo(at[who], dir, i => strips[i].locked || otherPlayers.some(player => at[player] === i));
       if (next === at[who]) return;
       at[who] = next;
       placeBoxes();
@@ -698,11 +832,20 @@
     function tune(player, action) {
       const index = at[player];
       const strip = strips[index];
-      if (!strip || index === CENTER || strip.locked) return;
+      if (!strip || isCenterStrip(index) || strip.locked) return;
       const channel = channelOf[action];
       const [min, max] = bounds[channel];
       const precision = channel === 'saturation' ? 1 : channel === 'lightness' ? 2 : 0;
-      strip[channel] = Number(Math.max(min, Math.min(max, strip[channel] + signOf[action] * steps[channel])).toFixed(precision));
+      if (animationLevel === 3 && channel === 'hue') {
+        const next = strip[channel] + signOf[action] * steps[channel];
+        strip[channel] = Number(cycleValue(next, min, max).toFixed(precision));
+      } else if (animationLevel === 3) {
+        const state = tuningDirections[index][channel];
+        strip[channel] = Number(swingTuningValue(strip[channel], min, max, steps[channel], signOf[action], state).toFixed(precision));
+      } else {
+        const next = strip[channel] + signOf[action] * steps[channel];
+        strip[channel] = Number(Math.max(min, Math.min(max, next)).toFixed(precision));
+      }
       if (scoreOf(strip) >= lockAt()) {
         strip.locked = true;
         finishRoundIfComplete();
@@ -711,7 +854,7 @@
     }
 
     function finishRoundIfComplete() {
-      if (!strips.every((item, i) => i === CENTER || item.locked) || winTimer) return;
+      if (!strips.every((item, i) => isCenterStrip(i) || item.locked) || winTimer) return;
       winTimer = setTimeout(nextRound, 700);
       centralSend({ type: 'prop', kind: 'drawing' });
       centralSend({
@@ -728,8 +871,9 @@
 
     function autoTune() {
       markPlayerActed();
+      const occupied = new Set(activePlayers().map(player => at[player]));
       strips.forEach((strip, index) => {
-        if (index === CENTER || index === at[1] || index === at[2] || strip.locked) return;
+        if (isCenterStrip(index) || occupied.has(index) || strip.locked) return;
         strip.hue = 0;
         strip.saturation = 1;
         strip.lightness = 1;
@@ -742,16 +886,32 @@
     const tuneAt = {};
 
     function onNamed(name, repeat, swapPlayers = false) {
-      const match = /^P([12]) (Left|Right|A|B|C|X|Y|Z)$/.exec(name);
+      const match = /^P([1-4]) (Left|Right|Up|Down|A|B|C|X|Y|Z)$/.exec(name);
       if (!match) return;
-      markPlayerActed();
       const player = Number(match[1]);
-      const targetPlayer = swapPlayers ? 3 - player : player;
-      const action = match[2] === 'Left' ? 'left' : match[2] === 'Right' ? 'right' : match[2];
-      if (action === 'left' || action === 'right') {
+      const action = match[2];
+      if (animationLevel !== 3 && player > 2) return;
+      if (animationLevel === 3 && (
+        (player <= 2 && !['Left', 'Right', 'A', 'B', 'C'].includes(action)) ||
+        (player >= 3 && !['Up', 'Down', 'X', 'Y', 'Z'].includes(action))
+      )) return;
+      markPlayerActed();
+      const targetPlayer = swapPlayers && animationLevel !== 3 ? 3 - player : player;
+      if (animationLevel === 3 && player <= 2 && (action === 'Left' || action === 'Right')) {
         if (!repeat) {
-          if (swapPlayers) moveCharacter(targetPlayer, action === 'left' ? -1 : 1);
-          else movePlayer(player, action === 'left' ? -1 : 1);
+          moveCharacter(targetPlayer, action === 'Right' ? -1 : 1);
+        }
+        return;
+      }
+      if (animationLevel === 3 && player >= 3 && (action === 'Up' || action === 'Down')) {
+        if (!repeat) moveCharacter(targetPlayer, action === 'Up' ? 1 : -1);
+        return;
+      }
+      if (animationLevel !== 3 && (action === 'Up' || action === 'Down')) return;
+      if (animationLevel !== 3 && (action === 'Left' || action === 'Right')) {
+        if (!repeat) {
+          if (swapPlayers) moveCharacter(targetPlayer, action === 'Left' ? -1 : 1);
+          else movePlayer(player, action === 'Left' ? -1 : 1);
         }
         return;
       }
@@ -763,11 +923,17 @@
 
     const keyboard = {
       ArrowLeft: 'P1 Left', ArrowRight: 'P1 Right',
+      ArrowUp: 'P3 Up', ArrowDown: 'P3 Down',
       o: 'P1 A', O: 'P1 A', p: 'P1 B', P: 'P1 B', '[': 'P1 C', '{': 'P1 C',
       l: 'P1 X', L: 'P1 X', ';': 'P1 Y', ':': 'P1 Y', "'": 'P1 Z', '"': 'P1 Z',
       a: 'P2 Left', A: 'P2 Left', d: 'P2 Right', D: 'P2 Right',
       r: 'P2 A', R: 'P2 A', t: 'P2 B', T: 'P2 B', y: 'P2 C', Y: 'P2 C',
-      f: 'P2 X', F: 'P2 X', g: 'P2 Y', G: 'P2 Y', h: 'P2 Z', H: 'P2 Z'
+      f: 'P2 X', F: 'P2 X', g: 'P2 Y', G: 'P2 Y', h: 'P2 Z', H: 'P2 Z',
+      w: 'P4 Up', W: 'P4 Up', s: 'P4 Down', S: 'P4 Down'
+    };
+    const levelThreeLowerKeys = {
+      l: 'P3 X', L: 'P3 X', ';': 'P3 Y', ':': 'P3 Y', "'": 'P3 Z', '"': 'P3 Z',
+      f: 'P4 X', F: 'P4 X', g: 'P4 Y', G: 'P4 Y', h: 'P4 Z', H: 'P4 Z'
     };
 
     nodes.forEach(node => {
@@ -824,6 +990,8 @@
     const pads = {
       P1: document.querySelector('#pad-p1'),
       P2: document.querySelector('#pad-p2'),
+      P3: document.querySelector('#pad-p3'),
+      P4: document.querySelector('#pad-p4'),
       Shared: document.querySelector('#pad-shared')
     };
     const chips = {};
@@ -832,7 +1000,7 @@
       const chip = document.createElement('button');
       chip.type = 'button';
       chip.addEventListener('click', () => { mapAt = index; mapPrompt(); });
-      const group = name.startsWith('P1 ') ? 'P1' : name.startsWith('P2 ') ? 'P2' : 'Shared';
+      const group = name.match(/^(P[1-4]) /)?.[1] || 'Shared';
       pads[group].append(chip);
       chips[name] = chip;
     });
@@ -898,7 +1066,7 @@
         return;
       }
       if (!config.hidden) return;
-      if (!event.repeat && ['1', '2'].includes(event.key)) {
+      if (!event.repeat && ['1', '2', '3'].includes(event.key)) {
         event.preventDefault();
         setAnimationLevel(Number(event.key));
         return;
@@ -914,7 +1082,7 @@
         autoTune();
         return;
       }
-      const name = keyboard[event.key];
+      const name = animationLevel === 3 ? (levelThreeLowerKeys[event.key] || keyboard[event.key]) : keyboard[event.key];
       if (!name) return;
       event.preventDefault();
       onNamed(name);
@@ -933,7 +1101,7 @@
       round = 0;
       stage = 1;
       mix = { 1: 1, 2: 2 };
-      at = [0, 5, 5];
+      at = animationLevel === 3 ? [0, 10, 11, 0, 20] : [0, CENTER, CENTER];
       config.hidden = true;
       begin();
     }
@@ -943,8 +1111,8 @@
     });
     const stageBus = createRemoteBus('game');
     function publishStage() {
-      const total = strips.length ? strips.length - 1 : 0;
-      const locked = strips.filter((item, index) => index !== CENTER && item.locked).length;
+      const total = strips.filter((item, index) => !isCenterStrip(index)).length;
+      const locked = strips.filter((item, index) => !isCenterStrip(index) && item.locked).length;
       stageBus.postMessage({
         from: 'game',
         type: 'state',
@@ -955,7 +1123,9 @@
         total,
         timer: stageTimer.textContent,
         p1: playerMatch(1),
-        p2: playerMatch(2)
+        p2: playerMatch(2),
+        p3: animationLevel === 3 ? playerMatch(3) : null,
+        p4: animationLevel === 3 ? playerMatch(4) : null
       });
     }
     stageBus.onmessage = (event) => {
@@ -990,8 +1160,8 @@
       return scoreOf(strip);
     }
     function centralStatus() {
-      const total = strips.length ? strips.length - 1 : 0;
-      const locked = strips.filter((item, index) => index !== CENTER && item.locked).length;
+      const total = strips.filter((item, index) => !isCenterStrip(index)).length;
+      const locked = strips.filter((item, index) => !isCenterStrip(index) && item.locked).length;
       const update = started ? `Round ${round + 1} · matched ${locked}/${total} · ${stageTimer.textContent}` : 'Waiting to start';
       const message = {
         type: 'status',
@@ -1005,7 +1175,9 @@
           need: `${lockAt()}%`,
           timer: stageTimer.textContent,
           p1: playerMatch(1),
-          p2: playerMatch(2)
+          p2: playerMatch(2),
+          p3: animationLevel === 3 ? playerMatch(3) : null,
+          p4: animationLevel === 3 ? playerMatch(4) : null
         }
       };
       central.status(message);
