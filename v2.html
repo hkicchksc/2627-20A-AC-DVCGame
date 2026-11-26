@@ -325,6 +325,7 @@
         <p>
           <b>H</b> = hue, <b>S</b> = saturation, <b>L</b> = lightness
         </p>
+        <p>Animation: 1 = HSL cycle, 2 = strip swing (continues during input); 3 reserved for four players.</p>
       </div>
       <p id="map-prompt">C closes.</p>
       <div id="pad">
@@ -451,7 +452,7 @@
       mark.hidden = true;
       strip.append(img, mark);
       board.append(strip);
-      nodes.push({ img, mark });
+      nodes.push({ img, mark, strip });
     }
     const box1 = document.createElement('div');
     const box2 = document.createElement('div');
@@ -472,8 +473,10 @@
     let timerInterval = 0;
     let stageStart = 0;
     let lastPlayerInputAt = 0;
-    let idleHslTimer = 0;
-    let idleHslResumeTimer = 0;
+    let animationLevel = 1;
+    let idleAnimationTimer = 0;
+    let idleAnimationResumeTimer = 0;
+    let swingTimer = 0;
 
     const randomStep = (min, max, step) => Number((min + Math.floor(Math.random() * ((max - min) / step + 1)) * step).toFixed(2));
 
@@ -547,13 +550,19 @@
       });
     }
 
-    function stopIdleHslAnimation() {
-      if (idleHslTimer) clearInterval(idleHslTimer);
-      idleHslTimer = 0;
+    function stopIdleAnimation() {
+      if (idleAnimationTimer) clearInterval(idleAnimationTimer);
+      idleAnimationTimer = 0;
     }
 
-    function startIdleHslAnimation() {
-      if (!started || idleHslTimer) return;
+    function stopStripSwing() {
+      if (swingTimer) clearInterval(swingTimer);
+      swingTimer = 0;
+      nodes.forEach(node => { node.strip.style.transform = ''; });
+    }
+
+    function startIdleAnimation() {
+      if (!started || idleAnimationTimer) return;
       const startedAt = Date.now();
       const initialHue = strips.map(strip => strip.hue);
       const periods = strips.map(() => ({
@@ -571,9 +580,9 @@
       }));
       const wave = phase => (1 - Math.cos(phase * 2 * Math.PI)) / 2;
       const hueRange = bounds.hue[1] - bounds.hue[0];
-      idleHslTimer = setInterval(() => {
+      idleAnimationTimer = setInterval(() => {
         if (!started) {
-          stopIdleHslAnimation();
+          stopIdleAnimation();
           return;
         }
         const elapsed = Date.now() - startedAt;
@@ -587,25 +596,58 @@
       }, 50);
     }
 
-    function scheduleIdleHslAnimation() {
-      if (idleHslResumeTimer) clearTimeout(idleHslResumeTimer);
-      idleHslResumeTimer = 0;
+    function startStripSwing() {
+      if (!started || animationLevel !== 2 || swingTimer) return;
+      const startedAt = Date.now();
+      const periods = strips.map(() => 1_500 + Math.random() * 2_500);
+      const phases = strips.map(() => Math.random());
+      swingTimer = setInterval(() => {
+        if (!started || animationLevel !== 2) {
+          stopStripSwing();
+          return;
+        }
+        const elapsed = Date.now() - startedAt;
+        strips.forEach((strip, index) => {
+          const node = nodes[index];
+          if (index === CENTER || strip.locked) {
+            node.strip.style.transform = '';
+            return;
+          }
+          const phase = (phases[index] + elapsed / periods[index]) % 1;
+          node.strip.style.transform = `translateY(${(Math.sin(phase * 2 * Math.PI) * 18).toFixed(2)}px)`;
+        });
+      }, 50);
+    }
+
+    function scheduleIdleAnimation() {
+      if (idleAnimationResumeTimer) clearTimeout(idleAnimationResumeTimer);
+      idleAnimationResumeTimer = 0;
       if (!started) return;
       const delay = Math.max(0, 5_000 - (Date.now() - lastPlayerInputAt));
       if (!delay) {
-        startIdleHslAnimation();
+        startIdleAnimation();
         return;
       }
-      idleHslResumeTimer = setTimeout(() => {
-        idleHslResumeTimer = 0;
-        if (Date.now() - lastPlayerInputAt >= 5_000) startIdleHslAnimation();
+      idleAnimationResumeTimer = setTimeout(() => {
+        idleAnimationResumeTimer = 0;
+        if (Date.now() - lastPlayerInputAt >= 5_000) startIdleAnimation();
       }, delay);
+    }
+
+    function setAnimationLevel(level) {
+      if (level !== 1 && level !== 2) return;
+      if (level === animationLevel) return;
+      animationLevel = level;
+      stopIdleAnimation();
+      if (level === 2) startStripSwing();
+      else stopStripSwing();
+      scheduleIdleAnimation();
     }
 
     function markPlayerActed() {
       lastPlayerInputAt = Date.now();
-      stopIdleHslAnimation();
-      scheduleIdleHslAnimation();
+      stopIdleAnimation();
+      scheduleIdleAnimation();
     }
 
     function startTimer() {
@@ -628,7 +670,8 @@
       }
       render();
       startTimer();
-      scheduleIdleHslAnimation();
+      scheduleIdleAnimation();
+      if (animationLevel === 2) startStripSwing();
     }
 
     function nextRound() {
@@ -855,6 +898,11 @@
         return;
       }
       if (!config.hidden) return;
+      if (!event.repeat && ['1', '2'].includes(event.key)) {
+        event.preventDefault();
+        setAnimationLevel(Number(event.key));
+        return;
+      }
       if (event.key === ' ' && !event.repeat) {
         event.preventDefault();
         markPlayerActed();
@@ -874,11 +922,12 @@
     function restartGame() {
       if (winTimer) clearTimeout(winTimer);
       if (timerInterval) clearInterval(timerInterval);
-      stopIdleHslAnimation();
-      if (idleHslResumeTimer) clearTimeout(idleHslResumeTimer);
+      stopIdleAnimation();
+      stopStripSwing();
+      if (idleAnimationResumeTimer) clearTimeout(idleAnimationResumeTimer);
       winTimer = 0;
       timerInterval = 0;
-      idleHslResumeTimer = 0;
+      idleAnimationResumeTimer = 0;
       started = false;
       lastPlayerInputAt = 0;
       round = 0;
