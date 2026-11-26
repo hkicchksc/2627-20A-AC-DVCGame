@@ -59,7 +59,7 @@ Windows 也可執行 `start.bat`；它會啟動本機伺服器，並嘗試以全
 2. 按 `C` 開啟設定，依提示逐一按下實體按鈕；不使用的控制可略過。
 3. 設定頁可匯出或匯入 JSON。預設腳位對應在 [`joystick-setup.json`](./joystick-setup.json)；瀏覽器也會保留目前的對應設定。
 
-模式 3 中，舊 P1 搖桿控制左下的 P1（Hamster）及左上的 P3（Dog）；舊 P2 搖桿控制右下的 P2（Mouse）及右上的 P4（Bug）。兩支搖桿的 Up/Down/X/Y/Z 分別對應到 P3/P4；若已為 P3 或 P4 個別設定搖桿按鈕，個別設定優先。
+模式 3 中，舊 P1 搖桿控制左下的 P1（Hamster）及左上的 P3（Dog）；舊 P2 搖桿控制右下的 P2（Mouse）及右上的 P4（Bug）。Up/Down 控制 P3/P4 移動；搖桿的 X/Y/Z 按鈕調整 P1/P2，A/B/C 按鈕調整 P3/P4。若已為 P3 或 P4 個別設定搖桿按鈕，個別設定優先。
 
 此控制台使用兩塊 Arduino：主板透過 USB 序列埠與遊戲通訊，並經 I²C 向從板讀取按鈕。接線、腳位與序列資料格式請參閱 [`arduino_console/README.md`](./arduino_console/README.md)。
 

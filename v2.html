@@ -1068,14 +1068,18 @@
     const serialState = { buffer: '', held: '' };
     const levelThreeJoystickAliases = {
       'P1 Up': 'P3 Up', 'P1 Down': 'P3 Down',
-      'P1 X': 'P3 X', 'P1 Y': 'P3 Y', 'P1 Z': 'P3 Z',
+      'P1 A': 'P3 X', 'P1 B': 'P3 Y', 'P1 C': 'P3 Z',
+      'P1 X': 'P1 A', 'P1 Y': 'P1 B', 'P1 Z': 'P1 C',
       'P2 Up': 'P4 Up', 'P2 Down': 'P4 Down',
-      'P2 X': 'P4 X', 'P2 Y': 'P4 Y', 'P2 Z': 'P4 Z'
+      'P2 A': 'P4 X', 'P2 B': 'P4 Y', 'P2 C': 'P4 Z',
+      'P2 X': 'P2 A', 'P2 Y': 'P2 B', 'P2 Z': 'P2 C'
     };
     function joystickControlForLevel(name) {
       if (animationLevel !== 3) return name;
       const alias = levelThreeJoystickAliases[name];
-      return alias && !Object.values(pinMap).includes(alias) ? alias : name;
+      if (!alias) return name;
+      const dedicatedLevelThreeControl = alias.startsWith('P3 ') || alias.startsWith('P4 ');
+      return dedicatedLevelThreeControl && Object.values(pinMap).includes(alias) ? name : alias;
     }
     const joy = createJoystick({
       onText(chunk) {
