@@ -115,7 +115,7 @@
       cursor: pointer;
     }
     #joystick-status { position: fixed; z-index: 7; top: 64px; left: 18px; max-width: 260px; margin: 0; font-size: 12px; }
-    #allow-joystick[hidden], #joystick-status[hidden], #config[hidden], #welcome[hidden] { display: none; }
+    #allow-joystick[hidden], #joystick-status[hidden], #config[hidden] { display: none; }
     #joystick-hints {
       position: fixed;
       z-index: 6;
@@ -176,62 +176,70 @@
       inset: 0;
       display: grid;
       place-items: center;
-      padding: 24px;
+      padding: 8px;
       background: rgba(20, 21, 19, .72);
     }
     #config .card {
-      width: min(640px, 100%);
-      max-height: calc(100vh - 48px);
+      display: grid;
+      grid-template-columns: minmax(0, .8fr) minmax(0, 1fr);
+      align-content: center;
+      column-gap: 16px;
+      row-gap: 6px;
+      width: min(760px, 100%);
+      max-height: calc(100dvh - 16px);
       overflow: auto;
-      padding: 16px;
+      padding: 12px;
       border: 1px solid rgba(255, 255, 255, .2);
       border-radius: 10px;
       background: rgba(23, 24, 22, .94);
     }
-    #map-prompt { margin: 0 0 12px; }
-    #pad { display: grid; gap: 10px; margin-bottom: 12px; }
-    .map-row { display: grid; gap: 6px; }
-    .map-row-label { color: #aaa99f; font-size: 12px; font-weight: 700; }
-    .map-controls { display: flex; flex-wrap: wrap; gap: 6px; }
+    #map-prompt, #pad, #map-file-status, #config-actions { grid-column: 2; }
+    #map-prompt { grid-row: 1; margin: 0; font-size: 12px; }
+    #pad { grid-row: 2; display: grid; gap: 5px; margin: 0; }
+    .map-row { display: grid; grid-template-columns: 38px minmax(0, 1fr); align-items: start; gap: 4px; }
+    .map-row-label { padding-top: 6px; color: #aaa99f; font-size: 10px; font-weight: 700; }
+    .map-controls { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 3px; }
     #pad button, #skip-map {
-      min-width: 4.2rem;
-      padding: 8px 10px;
+      min-width: 0;
+      padding: 5px 2px;
       border: 1px solid #44453f;
-      border-radius: 8px;
+      border-radius: 6px;
       background: #20211e;
       color: inherit;
+      font-size: 10px;
+      line-height: 1.15;
+      overflow-wrap: anywhere;
       cursor: pointer;
     }
-    #config-actions { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
-    #map-file-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+    #config-actions { grid-row: 4; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px; }
+    #map-file-actions { display: flex; flex-wrap: wrap; gap: 4px; }
     #map-file-actions button {
-      padding: 8px 10px;
+      padding: 5px 7px;
       border: 1px solid #44453f;
-      border-radius: 8px;
+      border-radius: 6px;
       background: #20211e;
       color: inherit;
+      font-size: 10px;
       cursor: pointer;
     }
-    #map-file-status { min-height: 1.4em; margin: 0; color: #aaa99f; }
+    #map-file-status { grid-row: 3; min-height: 1em; margin: 0; color: #aaa99f; font-size: 10px; }
     #pad button.on { border-color: #d1fb73; color: #d1fb73; }
-    #welcome {
-      position: fixed;
-      z-index: 9;
-      inset: 0;
+    .config-help {
       display: grid;
-      align-content: center;
-      justify-items: center;
-      gap: 16px;
-      padding: 24px;
-      overflow: auto;
-      background: #171816;
+      grid-column: 1;
+      grid-row: 1 / span 4;
+      align-self: center;
+      gap: 8px;
+      margin: 0;
+      padding-right: 12px;
+      border-right: 1px solid rgba(255, 255, 255, .16);
     }
-    #welcome h1 { margin: 0; font-size: clamp(32px, 5vw, 52px); }
-    #welcome p { margin: 0; max-width: 640px; color: #aaa99f; text-align: center; }
-    .decks { display: flex; flex-wrap: wrap; gap: 36px; justify-content: center; flex-direction: row-reverse;}
+    .config-help h1 { margin: 0; font-size: 20px; text-align: center; }
+    .config-help p { margin: 0; color: #aaa99f; font-size: 11px; text-align: center; }
+    .decks { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; flex-direction: column-reverse; }
     .deck { text-align: center; }
-    .deck h2 { margin: 0 0 10px; font-size: 28px; }
-    .layout { display: flex; align-items: flex-end; gap: 14px; }
+    .deck h2 { margin: 0 0 4px; font-size: 18px; }
+    .layout { display: flex; align-items: flex-end; justify-content: center; gap: 6px; }
     .stick, .face span {
       display: grid;
       align-content: center;
@@ -239,24 +247,39 @@
       border-radius: 50%;
       line-height: 1;
     }
-    .stick { width: 72px; height: 72px; }
-    .face { display: grid; grid-template-columns: repeat(3, 58px); gap: 8px; }
-    .face span { width: 58px; height: 58px; color: white; }
-    .face b, .stick b { font-size: 18px; }
-    .face small, .stick small { font-size: 11px; }
+    .stick { width: 40px; height: 40px; }
+    .face { display: grid; grid-template-columns: repeat(3, 34px); gap: 4px; }
+    .face span { width: 34px; height: 34px; color: white; }
+    .face b, .stick b { font-size: 12px; }
+    .face small, .stick small { font-size: 9px; }
     .blue .stick { background: #8fd4ff; color: #102033; }
     .blue .face span { background: #1d4ed8; }
     .red .stick { background: #ff5a5a; color: #2a0707; }
     .red .face span { background: #dc2626; }
-    #start {
-      padding: 10px 22px;
-      border: 1px solid rgba(255, 255, 255, .2);
-      border-radius: 8px;
-      background: #20211e;
-      color: inherit;
-      font: inherit;
-      font-size: 16px;
-      cursor: pointer;
+    @media (max-width: 520px) {
+      #config .card { display: block; }
+      .config-help {
+        margin-bottom: 8px;
+        padding: 0 0 8px;
+        border-right: 0;
+        border-bottom: 1px solid rgba(255, 255, 255, .16);
+      }
+      .decks { flex-direction: row-reverse; }
+      #map-prompt { margin-bottom: 6px; }
+      #pad { margin-bottom: 6px; }
+      #map-file-status { margin-bottom: 6px; }
+    }
+    @media (max-width: 360px) {
+      .config-help { gap: 5px; }
+      .config-help h1 { font-size: 18px; }
+      .decks { gap: 6px; }
+      .deck h2 { font-size: 16px; }
+      .layout { gap: 4px; }
+      .stick { width: 32px; height: 32px; }
+      .face { grid-template-columns: repeat(3, 28px); gap: 3px; }
+      .face span { width: 28px; height: 28px; }
+      .face b, .stick b { font-size: 10px; }
+      .face small, .stick small { font-size: 8px; }
     }
   </style>
   <script src="blackout.js"></script>
@@ -275,6 +298,34 @@
   <div id="fallback" hidden>Image unavailable. Check that the local images folder is present and reload.</div>
   <div id="config" hidden>
     <div class="card">
+      <div class="config-help">
+        <h1>Ways of Tuning</h1>
+        <div class="decks">
+          <section class="deck">
+            <h2><img src="./images/mouse.png" alt="Mouse"></h2>
+            <div class="layout blue">
+              <div class="stick"><b>← →</b><small>arrows</small></div>
+              <div class="face">
+                <span><b>O</b><small>H+</small></span><span><b>P</b><small>S+</small></span><span><b>[</b><small>L+</small></span>
+                <span><b>L</b><small>H−</small></span><span><b>;</b><small>S−</small></span><span><b>'</b><small>L−</small></span>
+              </div>
+            </div>
+          </section>
+          <section class="deck">
+            <h2><img src="./images/hamster.png" alt="Hamster"></h2>
+            <div class="layout red">
+              <div class="stick"><b>A D</b><small>left right</small></div>
+              <div class="face">
+                <span><b>R</b><small>H+</small></span><span><b>T</b><small>S+</small></span><span><b>Y</b><small>L+</small></span>
+                <span><b>F</b><small>H−</small></span><span><b>G</b><small>S−</small></span><span><b>H</b><small>L−</small></span>
+              </div>
+            </div>
+          </section>
+        </div>
+        <p>
+          <b>H</b> = hue, <b>S</b> = saturation, <b>L</b> = lightness
+        </p>
+      </div>
       <p id="map-prompt">C closes.</p>
       <div id="pad">
         <div class="map-row">
@@ -300,38 +351,6 @@
         </div>
       </div>
     </div>
-  </div>
-  <div id="welcome">
-    <h1>Ways of Tuning</h1>
-    <div class="decks">
-      <section class="deck">
-        <h2><img src="./images/mouse.png" alt="Mouse"></h2>
-        <div class="layout blue">
-          <div class="stick"><b>← →</b><small>arrows</small></div>
-          <div class="face">
-            <span><b>O</b><small>H+</small></span><span><b>P</b><small>S+</small></span><span><b>[</b><small>L+</small></span>
-            <span><b>L</b><small>H−</small></span><span><b>;</b><small>S−</small></span><span><b>'</b><small>L−</small></span>
-          </div>
-        </div>
-      </section>
-      <section class="deck">
-        <h2><img src="./images/hamster.png" alt="Hamster"></h2>
-        <div class="layout red">
-          <div class="stick"><b>A D</b><small>left right</small></div>
-          <div class="face">
-            <span><b>R</b><small>H+</small></span><span><b>T</b><small>S+</small></span><span><b>Y</b><small>L+</small></span>
-            <span><b>F</b><small>H−</small></span><span><b>G</b><small>S−</small></span><span><b>H</b><small>L−</small></span>
-          </div>
-        </div>
-      </section>
-    </div>
-    <p>
-      <b>H</b> = hue, <b>S</b> = saturation, <b>L</b> = lightness<br> 
-      <b>Upper row</b> tunes up +<br>
-      <b>Bottom row</b> tunes down -<br>
-      <b>Q</b> autotunes strips except those occupied by players
-    </p>
-    <button type="button" id="start">Click Space to Start</button>
   </div>
   <button type="button" id="allow-joystick" hidden>Allow joystick</button>
   <p id="joystick-status" role="status" hidden></p>
@@ -707,10 +726,6 @@
       onText(chunk) {
         for (const event of readJoystickLines(serialState, chunk)) {
           if (event.up || !event.pin) continue;
-          if (!welcome.hidden) {
-            if (!event.repeat) begin();
-            continue;
-          }
           if (!config.hidden) {
             if (!event.repeat && mapAt >= 0 && mapAt < joystickControls.length) {
               assignJoystickPin(event.pin, joystickControls[mapAt][0]);
@@ -739,21 +754,17 @@
           disconnected: 'Joystick disconnected.',
           error: 'Joystick error.'
         }[kind] || '';
-        if (connected && !welcome.hidden) begin();
       }
     });
     allowJoystick.addEventListener('click', () => { joy.requestPort(); });
 
-    const welcome = document.querySelector('#welcome');
     const config = document.querySelector('#config');
     let started = false;
     function begin() {
       if (started) return;
       started = true;
-      welcome.hidden = true;
       deal(images[0]);
     }
-    document.querySelector('#start').addEventListener('click', begin);
     const mapPromptEl = document.querySelector('#map-prompt');
     const mapFileStatus = document.querySelector('#map-file-status');
     const mapFile = document.querySelector('#map-file');
@@ -829,13 +840,6 @@
 
     window.addEventListener('keydown', event => {
       if (event.altKey || event.ctrlKey || event.metaKey) return;
-      if (!welcome.hidden) {
-        if (event.key === ' ' && !event.repeat) {
-          event.preventDefault();
-          begin();
-        }
-        return;
-      }
       if (event.key === 'c' || event.key === 'C') {
         event.preventDefault();
         config.hidden = !config.hidden;
@@ -874,9 +878,8 @@
       stage = 1;
       mix = { 1: 1, 2: 2 };
       at = [0, 5, 5];
-      welcome.hidden = false;
       config.hidden = true;
-      centralStatus();
+      begin();
     }
     const central = createCentralClient('dvc', {
       onRestart: restartGame,
@@ -966,6 +969,7 @@
       } else return;
       centralStatus();
     });
+    begin();
     joy.autoConnect();
   </script>
 </body>
