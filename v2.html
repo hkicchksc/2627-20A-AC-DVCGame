@@ -16,7 +16,7 @@
     * { box-sizing: border-box; }
     body { margin: 0; height: 100vh; height: 100dvh; overflow: hidden; background: #171816; }
     #board { position: fixed; inset: 0; display: flex; --slice-width: 1100%; --slice-height: 100%; --strip-width: 9.0909%; }
-    #board[data-level="3"] { display: grid; grid-template: repeat(2, minmax(0, 1fr)) / repeat(11, minmax(0, 1fr)); }
+    #board[data-level="3"] { display: grid; grid-template: repeat(2, minmax(0, 1fr)) / repeat(9, minmax(0, 1fr)); }
     .strip { position: relative; flex: 1; overflow: hidden; }
     .strip img {
       position: absolute;
@@ -62,7 +62,7 @@
       z-index: 3;
       bottom: 12px;
       width: var(--strip-width);
-      transition: bottom 180ms ease;
+      transition: top 180ms ease, bottom 180ms ease;
       pointer-events: none;
       font-size: min(68px, 12vw);
       line-height: 1;
@@ -368,7 +368,7 @@
           <b>H</b> = hue, <b>S</b> = saturation, <b>L</b> = lightness
         </p>
         <p>Press 1/2/3: HSL idle cycle / strip swing during input / four players.</p>
-        <p class="level-three-help">Level 3: 20 short strips in two rows around the central long strip. P1/P2 use ←/→ and A/B/C (+); P3/P4 use ↑/↓ and X/Y/Z (−). Hue wraps; saturation/brightness bounce between limits.</p>
+        <p class="level-three-help">Level 3: 16 short strips in two rows around the central long strip. P1/P2 use ←/→ and A/B/C (+); P3/P4 use ↑/↓ and X/Y/Z (−). Hue wraps; saturation/brightness bounce between limits.</p>
       </div>
       <p id="map-prompt">C closes.</p>
       <div id="pad">
@@ -492,17 +492,19 @@
     }
 
     const CENTER = 5;
+    const LEVEL_THREE_CENTER = 4;
+    const LEVEL_THREE_COUNT = 17;
+    const LEVEL_THREE_COLUMNS = 9;
     let animationLevel = 1;
-    function stripCount() { return animationLevel === 3 ? 21 : 11; }
+    function stripCount() { return animationLevel === 3 ? LEVEL_THREE_COUNT : 11; }
     function stripPosition(index) {
       if (animationLevel !== 3) return { row: 0, column: index };
-      if (index === CENTER) return { row: 0, column: CENTER };
-      if (index < CENTER) return { row: 0, column: index };
-      if (index <= 10) return { row: 0, column: index };
-      if (index <= 15) return { row: 1, column: 21 - index };
-      return { row: 1, column: 20 - index };
+      if (index === LEVEL_THREE_CENTER) return { row: 0, column: LEVEL_THREE_CENTER };
+      if (index <= LEVEL_THREE_CENTER * 2) return { row: 0, column: index };
+      if (index <= LEVEL_THREE_CENTER * 3) return { row: 1, column: LEVEL_THREE_COUNT - index };
+      return { row: 1, column: LEVEL_THREE_COUNT - 1 - index };
     }
-    function isCenterStrip(index) { return index === CENTER; }
+    function isCenterStrip(index) { return index === (animationLevel === 3 ? LEVEL_THREE_CENTER : CENTER); }
     function activePlayers() { return animationLevel === 3 ? [1, 2, 3, 4] : [1, 2]; }
     const steps = { hue: 5, saturation: 0.1, lightness: 0.05 };
     const bounds = { hue: [-180, 180], saturation: [0.4, 2], lightness: [0.55, 1.45] };
@@ -552,9 +554,9 @@
         node.strip.style.gridRow = animationLevel === 3 && !center ? String(row + 1) : '';
         node.strip.style.gridColumn = animationLevel === 3 ? String(column + 1) : '';
       });
-      board.style.setProperty('--slice-width', `${(animationLevel === 3 ? 11 : count) * 100}%`);
+      board.style.setProperty('--slice-width', `${(animationLevel === 3 ? LEVEL_THREE_COLUMNS : count) * 100}%`);
       board.style.setProperty('--slice-height', `${animationLevel === 3 ? 200 : 100}%`);
-      board.style.setProperty('--strip-width', `${100 / (animationLevel === 3 ? 11 : count)}%`);
+      board.style.setProperty('--strip-width', `${100 / (animationLevel === 3 ? LEVEL_THREE_COLUMNS : count)}%`);
       board.dataset.level = String(animationLevel);
     }
     syncStripNodes();
@@ -662,6 +664,52 @@
       return { 1: 2, 2: 1 };
     }
 
+    let soundContext = null;
+    function enableSound() {
+      const AudioContextType = window.AudioContext || window.webkitAudioContext;
+      if (typeof AudioContextType !== 'function') return Promise.resolve(null);
+      if (!soundContext) soundContext = new AudioContextType();
+      if (soundContext.state === 'running') return Promise.resolve(soundContext);
+      return soundContext.resume().then(() => soundContext).catch(error => {
+        console.warn('Could not enable game sound:', error);
+        return null;
+      });
+    }
+
+    function scheduleTone(context, frequency, start, duration, type, volume) {
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      oscillator.type = type;
+      oscillator.frequency.setValueAtTime(frequency, start);
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(volume, start + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+      oscillator.connect(gain);
+      gain.connect(context.destination);
+      oscillator.start(start);
+      oscillator.stop(start + duration + 0.02);
+    }
+
+    function playGameSound(effect, player) {
+      enableSound().then(context => {
+        if (!context || context.state !== 'running') return;
+        const start = context.currentTime + 0.02;
+        if (effect === 'move') {
+          const frequencies = [0, 349.23, 440, 523.25, 659.25];
+          const types = ['', 'sine', 'triangle', 'sine', 'triangle'];
+          scheduleTone(context, frequencies[player], start, 0.09, types[player], 0.045);
+        } else if (effect === 'cheese') {
+          [1174.66, 1174.66].forEach((frequency, index) => {
+            scheduleTone(context, frequency, start + index * 0.12, 0.08, 'sine', 0.055);
+          });
+        } else if (effect === 'photo') {
+          [523.25, 659.25, 783.99].forEach((frequency, index) => {
+            scheduleTone(context, frequency, start + index * 0.1, 0.2, 'triangle', 0.055);
+          });
+        }
+      });
+    }
+
     function stepTo(index, dir, blocked) {
       let i = index;
       for (let attempts = 0; attempts < stripCount(); attempts += 1) {
@@ -685,10 +733,11 @@
         const sharing = players.filter(other => at[other] === index);
         const character = characters[player];
         const { row, column } = stripPosition(index);
-        const bottom = !isCenterStrip(index) && strips[index] && strips[index].locked ? 76 : 12;
-        box.style.left = `${column * 100 / (animationLevel === 3 ? 11 : count)}%`;
-        box.style.top = animationLevel === 3 && row === 0 ? '12px' : 'auto';
-        box.style.bottom = animationLevel === 3 && row === 0 ? 'auto' : `${bottom}px`;
+        const locked = !isCenterStrip(index) && strips[index] && strips[index].locked;
+        const offset = locked ? 76 : 12;
+        box.style.left = `${column * 100 / (animationLevel === 3 ? LEVEL_THREE_COLUMNS : count)}%`;
+        box.style.top = animationLevel === 3 && row === 0 ? `${offset}px` : 'auto';
+        box.style.bottom = animationLevel === 3 && row === 0 ? 'auto' : `${offset}px`;
         box.style.transform = sharing.length > 1 ? (player === sharing[0] ? 'translateX(22%)' : 'translateX(-22%)') : '';
         box.innerHTML = `<img src="${character.src}" alt="${character.alt}">`;
         box.style.textShadow = character.shadow;
@@ -911,7 +960,7 @@
 
     function deal(image) {
       syncStripNodes();
-      at = animationLevel === 3 ? [0, 20, 11, 0, 10] : [0, CENTER, CENTER];
+      at = animationLevel === 3 ? [0, 16, 9, 0, 8] : [0, CENTER, CENTER];
       strips = Array.from({ length: stripCount() }, (_, i) => (isCenterStrip(i) ? { center: true, locked: true } : { ...randomColor(), locked: false }));
       tuningDirections = strips.map(() => ({
         saturation: { sign: 0, direction: 0 },
@@ -946,6 +995,7 @@
       const next = stepTo(at[who], dir, i => strips[i].locked || otherPlayers.some(player => at[player] === i));
       if (next === at[who]) return;
       at[who] = next;
+      playGameSound('move', who);
       placeBoxes();
     }
 
@@ -968,6 +1018,7 @@
       }
       if (scoreOf(strip) >= lockAt()) {
         strip.locked = true;
+        playGameSound('cheese');
         finishRoundIfComplete();
       }
       render();
@@ -976,16 +1027,8 @@
     function finishRoundIfComplete() {
       if (!strips.every((item, i) => isCenterStrip(i) || item.locked) || winTimer) return;
       winTimer = setTimeout(nextRound, 700);
+      playGameSound('photo');
       centralSend({ type: 'prop', kind: 'drawing' });
-      centralSend({
-        type: 'signal',
-        reason: 'round',
-        phase: 'clear',
-        score: round + 1,
-        update: `Round ${round + 1} cleared`,
-        summary: `Round ${round + 1} cleared`,
-        detail: { round: round + 1 }
-      });
       sendOsc('clear', `Round ${round + 1} cleared`, round + 1);
     }
 
@@ -1109,7 +1152,10 @@
         }[kind] || '';
       }
     });
-    allowJoystick.addEventListener('click', () => { joy.requestPort(); });
+    allowJoystick.addEventListener('click', () => {
+      enableSound();
+      joy.requestPort();
+    });
 
     const config = document.querySelector('#config');
     let started = false;
@@ -1245,7 +1291,7 @@
       round = 0;
       stage = 1;
       mix = { 1: 1, 2: 2 };
-      at = animationLevel === 3 ? [0, 20, 11, 0, 10] : [0, CENTER, CENTER];
+      at = animationLevel === 3 ? [0, 16, 9, 0, 8] : [0, CENTER, CENTER];
       config.hidden = true;
       begin();
     }
