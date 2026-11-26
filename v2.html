@@ -531,6 +531,21 @@
     let round = 0;
     let strips = [];
     let tuningDirections = [];
+    const timingQuery = new URLSearchParams(location.search);
+    const MAX_TIMER_DELAY_MS = 2_147_483_647;
+    function timingOverrideMs(name, defaultMs) {
+      const raw = timingQuery.get(name);
+      if (raw === null) return defaultMs;
+      const seconds = Number(raw);
+      const milliseconds = seconds * 1000;
+      if (!Number.isFinite(seconds) || seconds <= 0 || milliseconds > MAX_TIMER_DELAY_MS) {
+        console.warn(`Ignoring invalid ${name} query parameter.`);
+        return defaultMs;
+      }
+      return Math.max(1, Math.round(milliseconds));
+    }
+    const IDLE_ANIMATION_DELAY_MS = timingOverrideMs('idleSeconds', 15_000);
+    const LEVEL_UP_INTERVAL_MS = timingOverrideMs('levelUpSeconds', 5 * 60 * 1000);
     let winTimer = 0;
     let timerInterval = 0;
     let stageStart = 0;
@@ -749,14 +764,14 @@
       if (idleAnimationResumeTimer) clearTimeout(idleAnimationResumeTimer);
       idleAnimationResumeTimer = 0;
       if (!started) return;
-      const delay = Math.max(0, 5_000 - (Date.now() - lastPlayerInputAt));
+      const delay = Math.max(0, IDLE_ANIMATION_DELAY_MS - (Date.now() - lastPlayerInputAt));
       if (!delay) {
         startIdleAnimation();
         return;
       }
       idleAnimationResumeTimer = setTimeout(() => {
         idleAnimationResumeTimer = 0;
-        if (Date.now() - lastPlayerInputAt >= 5_000) startIdleAnimation();
+        if (Date.now() - lastPlayerInputAt >= IDLE_ANIMATION_DELAY_MS) startIdleAnimation();
       }, delay);
     }
 
@@ -807,13 +822,13 @@
       if (timersStarted) return;
       timersStarted = true;
       overallStart = Date.now();
-      nextLevelUpAt = overallStart + 10_000;
+      nextLevelUpAt = overallStart + LEVEL_UP_INTERVAL_MS;
       startTimer();
       overallTimerInterval = setInterval(() => {
         const now = Date.now();
         while (now >= nextLevelUpAt) {
           if (animationLevel < 3) setAnimationLevel(animationLevel + 1);
-          nextLevelUpAt += 10_000;
+          nextLevelUpAt += LEVEL_UP_INTERVAL_MS;
         }
       }, 250);
     }
