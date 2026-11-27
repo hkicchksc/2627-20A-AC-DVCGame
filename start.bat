@@ -3,7 +3,7 @@ cd /d "%~dp0"
 if /i "%~1"=="openchrome" goto openchrome
 echo Ways of Tuning game view: http://127.0.0.1:5174/
 echo Backstage: http://127.0.0.1:5174/backstage
-set "URL=http://127.0.0.1:5174/"
+set "URL=http://127.0.0.1:5174/?central=http://10.218.95.254:9021"
 set "CHROME="
 if exist "%ProgramFiles%\Google\Chrome\Application\chrome.exe" set "CHROME=%ProgramFiles%\Google\Chrome\Application\chrome.exe"
 if not defined CHROME if exist "%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe" set "CHROME=%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe"
